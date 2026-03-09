@@ -1,313 +1,63 @@
-# Multi-Armed Bandit Algorithms — Chapter 2 Reproduction & Extensions
+# Multi-Armed Bandits: Exploration, Exploitation, and Action-Value Methods
 
-This project implements and evaluates a comprehensive set of **multi-armed bandit algorithms**, reproducing the core ideas from Chapter 2 of *Reinforcement Learning: An Introduction* by Richard S. Sutton and Andrew G. Barto, while also including several **modern extensions used in bandit research**.
+This repository contains an experimental study of **multi-armed bandit algorithms** based on the framework presented in:
 
-The goal of the project is to study the **exploration–exploitation trade-off** through simulation experiments across different environments, estimators, and policies.
+Sutton, R. S., & Barto, A. G. *Reinforcement Learning: An Introduction (2nd Edition)*.
 
----
+The project investigates how different exploration strategies and action-value estimation methods influence learning performance in both stationary and nonstationary bandit environments.
 
-# Project Goals
-
-This project aims to:
-
-- Reproduce the **key algorithms from Chapter 2** of Sutton & Barto
-- Compare multiple **exploration strategies**
-- Evaluate **different action-value estimation methods**
-- Analyse performance under **stationary and nonstationary environments**
-- Study **parameter sensitivity**
-- Extend the analysis with **modern bandit techniques** such as Thompson sampling and regret analysis
+The experiments were implemented in Python and evaluated through learning curves, parameter studies, and summary tables.
 
 ---
 
-# Bandit Framework Taxonomy
+# Project Overview
 
-The multi-armed bandit problem can be decomposed into four core components:
+The multi-armed bandit problem is a classical reinforcement learning setting in which an agent repeatedly selects from a set of actions with unknown reward distributions.
 
-1. **Environment** – how rewards are generated  
-2. **Estimator** – how action values are estimated  
-3. **Policy** – how actions are selected  
-4. **Metric** – how algorithm performance is evaluated  
+The agent must balance two competing objectives:
+
+- **Exploration** — trying different actions to gather information  
+- **Exploitation** — selecting the action that currently appears to produce the highest reward  
+
+This repository studies this trade-off through three experimental problems.
+
+| Problem | Focus |
+|------|------|
+| **Problem 1** | Implementation of a multi-armed bandit algorithm |
+| **Problem 2** | Exploration strategies |
+| **Problem 3** | Action-value estimation methods |
+
+All experiments follow the standard Gaussian bandit testbed and results are averaged across many independent runs.
+
+---
+
+# Repository Structure
 
 ```mermaid
-graph TD
-
-A[Multi-Armed Bandit Problem]
-
-A --> B[Environment]
-B --> B1[Stationary Bandit]
-B --> B2[Nonstationary Bandit]
-B --> B3[Contextual Bandit]
-
-A --> C[Action Value Estimation]
-C --> C1[Sample Average]
-C --> C2[Constant Step Size]
-C --> C3[Unbiased Constant Alpha]
-C --> C4[Sliding Window]
-
-A --> D[Policies / Action Selection]
-D --> D1[Greedy]
-D --> D2[Epsilon Greedy]
-D --> D3[Optimistic Initial Values]
-D --> D4[Upper Confidence Bound]
-D --> D5[Softmax / Boltzmann]
-D --> D6[Gradient Bandit]
-D --> D7[Thompson Sampling]
-
-A --> E[Experiments]
-E --> E1[Epsilon Greedy Comparison]
-E --> E2[Algorithm Comparison]
-E --> E3[Parameter Study]
-E --> E4[Nonstationary Tracking]
-E --> E5[Contextual Bandit Experiment]
-
-A --> F[Evaluation Metrics]
-F --> F1[Average Reward]
-F --> F2[Optimal Action Percentage]
-F --> F3[Cumulative Regret]
-```
-
----
-
-# Environment Types
-
-## Stationary Bandit
-
-The true action values remain constant over time.
-
-```
-q*(a) = constant
-```
-
----
-
-## Nonstationary Bandit
-
-The reward distribution changes over time via a random walk.
-
-```
-q*(a)_{t+1} = q*(a)_t + noise
-```
-
----
-
-## Contextual Bandit
-
-Rewards depend on the current state or context.
-
-```
-Q(s,a)
-```
-
-The optimal action varies depending on the environment state.
-
----
-
-# Action-Value Estimators
-
-These determine how the agent updates its estimate of expected reward.
-
-## Sample-Average Estimator
-
-```
-Q ← Q + (1/N)(R − Q)
-```
-
-Uses the average of all observed rewards.
-
----
-
-## Constant Step-Size Estimator
-
-```
-Q ← Q + α(R − Q)
-```
-
-Places more weight on recent rewards.
-
----
-
-## Unbiased Constant Step-Size Trick
-
-Removes initialization bias present in constant step-size updates.
-
----
-
-## Sliding Window Estimator
-
-```
-Q(a) = average of last W rewards
-```
-
-Uses only the most recent observations, useful in nonstationary environments.
-
----
-
-# Action Selection Policies
-
-These determine how the agent selects actions.
-
-## Greedy
-
-Always chooses the action with the highest estimated value.
-
----
-
-## ε-Greedy
-
-Chooses the best action most of the time but explores randomly with probability ε.
-
----
-
-## Optimistic Initial Values
-
-Encourages exploration by initializing action values with high estimates.
-
----
-
-## Upper Confidence Bound (UCB)
-
-Balances exploration and exploitation using confidence bounds.
-
-```
-Q(a) + c * sqrt( ln(t) / N(a) )
-```
-
----
-
-## Softmax / Boltzmann Policy
-
-Selects actions probabilistically based on preference scores.
-
-```
-π(a) = exp(H(a)) / Σ exp(H(b))
-```
-
----
-
-## Gradient Bandit
-
-Updates action preferences directly using stochastic gradient ascent.
-
----
-
-## Thompson Sampling
-
-A Bayesian approach that samples reward estimates from posterior distributions.
-
----
-
-# Experiments
-
-The project evaluates algorithms using several experimental setups:
-
-- ε-Greedy exploration comparison
-- Algorithm performance comparison
-- Parameter sensitivity analysis
-- Nonstationary reward tracking
-- Contextual bandit learning experiments
-
----
-
-# Evaluation Metrics
-
-## Average Reward
-
-Mean reward obtained over time.
-
----
-
-## Optimal Action Percentage
-
-The fraction of times the optimal action is selected.
-
----
-
-## Cumulative Regret
-
-```
-Regret(T) = Σ (q* − q_A_t)
-```
-
-Measures the total loss incurred by not always choosing the optimal action.
-
----
-
-# Chapter 2 Coverage
-
-This project reproduces the following ideas from Chapter 2 of Sutton & Barto:
-
-- Greedy action selection
-- ε-Greedy exploration
-- Optimistic initial values
-- Upper Confidence Bound (UCB)
-- Gradient bandit algorithms
-- Sample-average estimation
-- Constant step-size estimation
-- Nonstationary bandit tracking
-- Contextual bandits (associative search)
-
----
-
-# Extensions Beyond Chapter 2
-
-To broaden the analysis, the project also includes:
-
-- Sliding window estimators
-- Thompson sampling
-- Regret-based evaluation
-
-These extensions are commonly used in modern bandit research.
-
----
-
-# Installation
-
-Clone the repository:
-
-```bash
-git clone https://github.com/yourusername/bandit-algorithms.git
-cd bandit-algorithms
-```
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
----
-
-# Running Experiments
-
-Run the main experiment script:
-
-```bash
-python main.py
-```
-
-This will generate all figures used in the analysis.
-
----
-
-# Example Results
-
-Typical outputs include:
-
-- Average reward learning curves
-- Optimal action percentage
-- Parameter sensitivity plots
-- Nonstationary tracking performance
-- Contextual bandit learning curves
-
----
-
-# References
-
-Sutton, R. S., & Barto, A. G. (2018).  
-*Reinforcement Learning: An Introduction (2nd ed.)*. MIT Press.
-
----
-
-# License
-
-MIT License
+flowchart TD
+
+A[Repository Root]
+
+A --> B[notebook.ipynb]
+A --> C[report.pdf]
+A --> D[outputs]
+
+D --> E[Problem 1]
+E --> E1[fig1_q1_eps_greedy_avg_reward.png]
+E --> E2[fig1_q1_eps_greedy_pct_optimal.png]
+E --> E3[table_problem1_n_sensitivity.csv]
+
+D --> F[Problem 2]
+F --> F1[fig2_q2_algorithm_comparison_avg_reward.png]
+F --> F2[fig2_q2_algorithm_comparison_pct_optimal.png]
+F --> F3[fig3_q2_parameter_sensitivity.png]
+F --> F4[table2a_best_parameter.csv]
+F --> F5[table2b_scaling_summary.csv]
+
+D --> G[Problem 3]
+G --> G1[fig4_q3_stationary_avg_reward.png]
+G --> G2[fig4_q3_stationary_pct_optimal.png]
+G --> G3[fig5_q3_nonstationary_avg_reward.png]
+G --> G4[fig5_q3_nonstationary_pct_optimal.png]
+G --> G5[table3_stationary_summary.csv]
+G --> G6[table3_nonstationary_summary.csv]
