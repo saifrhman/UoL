@@ -1,13 +1,15 @@
 \documentclass[11pt]{article}
 
-\usepackage[a4paper,margin=1in]{geometry}
 \usepackage{graphicx}
-\usepackage{amsmath}
 \usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{geometry}
 \usepackage{hyperref}
 
-\title{Predicting Patient Diagnosis Using Machine Learning}
-\author{Laura Valentina Sierra Pena\and Ainur Smailova \and Saif Ur Rehman}
+\geometry{margin=1in}
+
+\title{Predicting Diagnostic Outcomes Using Machine Learning}
+\author{Your Name}
 \date{\today}
 
 \begin{document}
@@ -16,53 +18,51 @@
 
 \section{Problem Formulation}
 
-The objective of this study is to predict patient diagnostic outcomes using demographic, behavioural, and clinical variables. The target variable, \textit{diagnosis}, contains three categories: \textit{Depression}, \textit{CI}, and \textit{Both}. Therefore, the task is formulated as a supervised multiclass classification problem.
+The objective of this study is to predict patient diagnostic outcomes using demographic and clinical variables. The dataset contains measurements related to sleep quality, fatigue severity, stress levels, and behavioural indicators. The target variable \textit{diagnosis} contains three categories: \textit{Depression}, \textit{CI}, and \textit{Both}. Consequently, the task is formulated as a supervised multiclass classification problem.
 
-Machine learning models are trained to learn relationships between patient characteristics and diagnostic outcomes. The goal is to develop a predictive model capable of accurately classifying unseen patient cases.
+The dataset initially contained 670 observations and 19 variables. The goal is to determine whether the available demographic and clinical variables can accurately predict patient diagnosis.
 
-\section{Data Management}
+\section{Data Analysis and Feature Selection}
 
-\subsection{Exploratory Data Analysis}
+Initial data exploration confirmed that the dataset contains no missing values and no duplicate observations. The dataset size is relatively small to moderate, making classical machine learning models more appropriate than deep learning approaches.
 
-Initial exploration was conducted to understand the dataset structure and detect potential data quality issues. The dataset contains 670 observations and 19 variables representing demographic information, behavioural patterns, and clinical measurements.
+Inspection of the dataset revealed that the \textit{id} variable represents a unique patient identifier and therefore provides no predictive value. Additionally, the \textit{country} variable was constant across all observations and was removed from the dataset.
 
-Missing value analysis confirmed that no missing values were present in the dataset, meaning no imputation strategies were required.
+A statistical summary of the numerical variables revealed that the variable \textit{depression\_phq9\_score} contained a value of 99, which lies outside the valid clinical range (0--27) for the PHQ-9 depression scale. This observation was removed, resulting in a dataset containing 669 observations.
 
-Multiple visualisation techniques were used to analyse the data:
+Several visualisation techniques were used to analyse the dataset. Histograms and violin plots were generated to examine distributional properties such as shape, symmetry, and density concentration. Most variables displayed smooth bounded distributions across their scales.
 
-\begin{itemize}
-\item Histograms were used to examine the distribution of numerical variables.
-\item Violin plots were used to assess distribution shape and spread.
-\item Boxplots were used to detect potential outliers.
-\end{itemize}
+Boxplots were used to identify potential outliers. Although some values were detected outside the interquartile range for \textit{fatigue\_severity\_scale\_score} and \textit{depression\_phq9\_score}, these observations remained within clinically valid ranges and were therefore retained.
 
-Although several extreme values were observed, these values were within clinically valid ranges specified in the dataset description and were therefore retained.
+Scatterplots were used to investigate relationships between numerical variables. For example, the relationship between stress level and fatigue severity showed that fatigue severity tends to be higher for the \textit{CI} and \textit{Both} diagnostic groups, while stress levels were distributed across all categories.
 
-\subsection{Feature Screening}
+Class distribution analysis revealed moderate class imbalance, with the \textit{Both} category containing fewer observations than the other classes. To ensure reliable evaluation, stratified sampling was adopted in the experimental protocol.
 
-A correlation heatmap was used to detect multicollinearity among numerical variables. A very strong correlation was observed between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}. Since highly correlated variables introduce redundancy, the variable \textit{deep\_sleep\_quality\_index} was removed.
+\subsection{Correlation and Redundancy Analysis}
 
-Categorical relationships were analysed using Cramér’s V statistics. This analysis revealed negligible associations among most categorical predictors. However, a perfect association was identified between the variable \textit{pem\_present} and the diagnosis variable. This indicates target leakage, meaning the feature contains direct information about the outcome. Consequently, \textit{pem\_present} was removed from the dataset.
+A Pearson correlation heatmap was generated to examine relationships among numerical variables. A very strong correlation ($r=0.97$) was observed between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}. Since highly correlated variables introduce redundancy and may negatively affect linear models, further analysis was performed.
 
-The variable \textit{id} was also removed as it represents a unique identifier and does not provide predictive information.
+Point plots and one-way ANOVA tests were conducted to examine whether these variables differed significantly across diagnostic groups. Neither variable showed statistically significant differences across classes. However, \textit{sleep\_quality\_index} demonstrated slightly stronger group separation and was therefore retained while \textit{deep\_sleep\_quality\_index} was removed.
 
-\subsection{Feature Encoding}
+\subsection{Categorical Association Analysis}
 
-Machine learning algorithms require numerical input; therefore categorical variables were encoded before model training.
+Cramér's V statistics were computed to evaluate associations between categorical variables and the target variable. The variable \textit{pem\_present} showed perfect association ($V=1.0$) with the target variable. Examination of the contingency table revealed that this variable deterministically partitioned the diagnostic classes. This represents target leakage and would artificially inflate model performance.
 
-Nominal variables such as \textit{gender} and \textit{work\_status} were encoded using one-hot encoding. Ordinal variables including \textit{social\_activity\_level} and \textit{exercise\_frequency} were encoded using ordinal encoding to preserve their natural ordering. Binary variables were encoded as indicator values.
+Therefore, \textit{pem\_present} was removed from the dataset.
 
-To prevent data leakage, preprocessing was implemented within model pipelines and applied only during training folds in cross-validation.
+After these preprocessing steps, the remaining features showed weak correlations and were considered suitable for modelling.
 
-\subsection{Experimental Protocol}
+\section{Experimental Protocol}
 
-To evaluate model performance reliably, the dataset was divided into training and testing subsets using an 80/20 stratified split. Stratification ensures that class proportions remain consistent across both sets.
+To ensure reliable model evaluation, the dataset was divided into training and testing subsets using an 80/20 stratified train--test split. Stratification preserves class distribution across both subsets.
 
-Model selection and hyperparameter tuning were performed using stratified 5-fold cross-validation on the training set. Macro F1-score was used as the primary evaluation metric because it gives equal importance to all classes.
+Model selection and hyperparameter tuning were performed using stratified 5-fold cross-validation on the training set. Macro F1-score was selected as the primary evaluation metric because it provides balanced performance across all classes and is robust to moderate class imbalance.
 
-\section{Model Training}
+All preprocessing steps, including categorical encoding and feature scaling, were implemented within a machine learning pipeline to prevent data leakage during cross-validation.
 
-Three machine learning models discussed during lectures were selected for comparison:
+\section{Machine Learning Methods}
+
+Three classification algorithms discussed during lectures were selected for comparison:
 
 \begin{itemize}
 \item Logistic Regression
@@ -70,37 +70,76 @@ Three machine learning models discussed during lectures were selected for compar
 \item Random Forest
 \end{itemize}
 
-These models represent different learning paradigms: linear classification, instance-based learning, and ensemble tree-based learning.
+These models represent different machine learning paradigms.
 
-Hyperparameter tuning was conducted using Grid Search. For Logistic Regression, the regularisation parameter $C$ was tuned. For KNN, the number of neighbours and weighting scheme were optimised. For Random Forest, the number of trees and maximum tree depth were explored.
+Logistic Regression is a linear classifier that models the relationship between predictors and the probability of each class. It provides a strong baseline model and assumes approximately linear relationships between features and the target.
 
-Cross-validation results showed that Random Forest achieved the highest Macro F1-score, significantly outperforming Logistic Regression and KNN. This indicates that nonlinear relationships and feature interactions are important for predicting patient diagnosis.
+KNN is a distance-based instance learning algorithm that classifies observations based on the labels of neighbouring data points in the feature space. It captures local similarity patterns without assuming a predefined functional form.
 
-Therefore, Random Forest was selected as the final model.
+Random Forest is an ensemble tree-based model that combines multiple decision trees to capture nonlinear relationships and feature interactions. Ensemble methods such as Random Forest often perform well on structured tabular datasets.
 
-\section{Model Evaluation}
+\section{Hyperparameter Search}
 
-The selected Random Forest model was evaluated on the unseen test set.
+Hyperparameter tuning was performed using grid search within stratified 5-fold cross-validation. Table~\ref{tab:hyperparameters} summarises the search spaces and best configurations obtained during model selection.
 
-The model achieved the following performance:
+\begin{table}[h]
+\centering
+\begin{tabular}{lccc}
+\toprule
+Model & Hyperparameter Grid & Best Hyperparameters & CV Macro F1 \\
+\midrule
+Logistic Regression & $C \in \{0.1,1,10\}$ & $C = 10$ & 0.774 \\
+kNN & $k \in \{3,5,7,9,11\}$ & $k = 11$ & 0.548 \\
+Random Forest & $n_{trees} \in \{200,500\}$, $depth \in \{None,10,20\}$ & $n_{trees}=500$, $depth=10$ & 0.947 \\
+\bottomrule
+\end{tabular}
+\caption{Hyperparameter tuning results using grid search with stratified 5-fold cross-validation}
+\label{tab:hyperparameters}
+\end{table}
 
-\begin{itemize}
-\item Test Accuracy: 0.963
-\item Macro F1-score: 0.954
-\end{itemize}
+Random Forest achieved the highest cross-validation Macro F1-score. This indicates that nonlinear relationships and interactions between variables play an important role in predicting diagnostic outcomes.
 
-Class-wise evaluation showed that the CI class was perfectly classified. The Depression class also achieved high precision and recall. The Both category exhibited slightly lower recall, with a small number of cases misclassified as Depression.
+\section{Model Comparison}
 
-The confusion matrix indicates that classification errors are minimal and primarily occur between the Both and Depression categories. This may reflect overlapping clinical characteristics between these groups.
+Table~\ref{tab:modelcomparison} summarises the performance of the evaluated models.
 
-Overall, the Random Forest model demonstrates strong predictive capability and generalises well to unseen data.
+\begin{table}[h]
+\centering
+\begin{tabular}{lc}
+\toprule
+Model & Cross-Validated Macro F1 Score \\
+\midrule
+Logistic Regression & 0.774 \\
+kNN & 0.548 \\
+Random Forest & 0.947 \\
+\bottomrule
+\end{tabular}
+\caption{Cross-validated performance comparison}
+\label{tab:modelcomparison}
+\end{table}
+
+Random Forest significantly outperformed the other models. Logistic Regression achieved moderate performance, indicating that some linear structure exists in the dataset. In contrast, KNN performed substantially worse, suggesting that local neighbourhood similarity alone is insufficient to capture the complex patterns in the data.
+
+\section{Final Model Evaluation}
+
+The Random Forest model with the best hyperparameters ($n\_estimators=500$, $max\_depth=10$) was evaluated on the unseen test set.
+
+The model achieved an accuracy of approximately 0.96 and a Macro F1-score of approximately 0.95, indicating strong predictive performance across all diagnostic categories.
+
+The confusion matrix indicates that the \textit{CI} category was classified with perfect accuracy. The \textit{Depression} class also achieved high recall and precision. A small number of \textit{Both} cases were misclassified as \textit{Depression}, suggesting some overlap between these two diagnostic groups.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.6\textwidth]{confusion_matrix.png}
+\caption{Confusion matrix of the Random Forest classifier}
+\end{figure}
 
 \section{Conclusion}
 
-This study applied several machine learning techniques to predict patient diagnostic outcomes based on demographic and clinical variables. Through careful exploratory data analysis, feature screening, and rigorous model evaluation, Random Forest was identified as the most effective model.
+This study investigated the use of machine learning techniques to predict diagnostic outcomes based on patient demographic and clinical features. Through comprehensive exploratory data analysis, feature selection, and systematic model comparison, Random Forest was identified as the most effective algorithm.
 
-The model achieved high accuracy and balanced performance across all classes, demonstrating that ensemble tree-based methods are well suited for structured healthcare datasets.
+The final model achieved strong predictive performance on unseen data, demonstrating that ensemble tree-based methods are well suited for structured healthcare datasets where nonlinear relationships and feature interactions are present.
 
-Future work could explore additional ensemble methods, larger datasets, and more advanced feature engineering techniques to further improve predictive performance.
+Future work could explore additional ensemble techniques or larger datasets to further improve predictive performance.
 
 \end{document}
