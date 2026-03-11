@@ -9,7 +9,7 @@
 \geometry{margin=1in}
 
 \title{Predicting Diagnostic Outcomes Using Machine Learning}
-\author{Your Name}
+\author{Saif Ur Rehman, Laura Valentina Sierra Pena, Ainur Smailova}
 \date{\today}
 
 \begin{document}
@@ -84,6 +84,7 @@ Hyperparameter tuning was performed using grid search within stratified 5-fold c
 
 \begin{table}[h]
 \centering
+\resizebox{\textwidth}{!}{
 \begin{tabular}{lccc}
 \toprule
 Model & Hyperparameter Grid & Best Hyperparameters & CV Macro F1 \\
@@ -93,6 +94,7 @@ kNN & $k \in \{3,5,7,9,11\}$ & $k = 11$ & 0.548 \\
 Random Forest & $n_{trees} \in \{200,500\}$, $depth \in \{None,10,20\}$ & $n_{trees}=500$, $depth=10$ & 0.947 \\
 \bottomrule
 \end{tabular}
+}
 \caption{Hyperparameter tuning results using grid search with stratified 5-fold cross-validation}
 \label{tab:hyperparameters}
 \end{table}
