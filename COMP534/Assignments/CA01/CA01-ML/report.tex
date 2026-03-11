@@ -174,7 +174,7 @@ Random Forest & $n\_estimators \in \{200, 500\}$, $max\_depth \in \{None, 10, 20
 
 The hyperparameter search results are summarised in Table~\ref{tab:hyperparameters}. Logistic Regression achieved a Macro F1-score of 0.774 with $C=10$, indicating that weaker regularisation improved performance. 
 
-The KNN model achieved a lower score of 0.548 with $k=11$, suggesting that local neighbourhood similarity alone was insufficient to separate the classes effectively.Additionally, the feature space in this dataset is heterogeneous, containing a mix of numerical and encoded categorical variables with different scales and distributions, which further distorts distance calculations. The relatively large optimal k = 11 also suggests that the decision boundaries are not well-captured by local neighbourhood structure alone.
+The KNN model achieved a lower score of 0.548 with $k=11$, suggesting that local neighbourhood similarity alone was insufficient to separate the classes effectively. Additionally, the feature space in this dataset is heterogeneous, containing a mix of numerical and encoded categorical variables with different scales and distributions, which further distorts distance calculations. The relatively large optimal k = 11 also suggests that the decision boundaries are not well-captured by local neighbourhood structure alone.
 
 Random Forest achieved the highest cross-validated Macro F1-score of 0.947 with $n\_estimators=500$ and $max\_depth=10$. This indicates that nonlinear relationships and feature interactions play an important role in predicting diagnosis. Consequently, Random Forest was selected for final evaluation on the test set.
 
@@ -198,6 +198,8 @@ Random Forest & 0.947 \\
 Table~\ref{tab:modelcomparison} summarises the cross-validated Macro F1-scores of the three candidate models. The performance gap between Random Forest (0.947) and the other two models is substantial, suggesting that the diagnostic patterns in this dataset are primarily driven by nonlinear interactions rather than linear separability or local similarity. Logistic Regression achieved moderate performance (0.774), confirming that some linear structure is present but insufficient on its own. The consistently weak performance of KNN (0.548) across all tested values of k further suggests that distance-based reasoning does not align well with the structure of this particular feature space.
 \bigbreak
 These results highlight an important consideration for clinical prediction tasks: when the relationship between predictors and outcomes is complex and involves interactions between multiple variables, ensemble methods such as Random Forest tend to outperform simpler models. Based on these findings, Random Forest was selected as the final candidate model.
+
+\textbf{ADD A BAR CHART COMPARTING MACRO F1}
 
 \section{Final Model Evaluation}
 
