@@ -1,0 +1,839 @@
+---
+title: 'COMP529 Big Data Analytics: CA2 (PCA Assignment)'
+author: "Saif Ur Rehman - 201940185"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: true
+    toc_depth: '2'
+  html_document:
+    toc: true
+    toc_depth: 2
+    number_sections: false
+    df_print: paged
+bibliography: references.bib
+---
+
+# Important — Read This First
+
+-   Open this file in **RStudio**.
+-   Switch to **Visual Mode** (button at the top-left of the editor).
+-   Complete all R code chunks marked with `# YOUR CODE GOES HERE`.
+-   If you are given a hint, try using RStudio's Help feature for the given keyword - e.g. for 'plot', type\
+    **?plot**\
+    into the console and you will see useful help information appear in the Help pane.
+-   Write your explanations in the **Explanation boxes** below each question.
+    -   Do **not delete** the line starting with `# Qx_EXPLANATION` — it helps us identify your answers.
+-   When finished, click **Knit → HTML** to output your answers.
+-   Submit **both the HTML file and the Rmd file** via Canvas.
+
+In this assignment you will clean financial time-series data, build a consistent panel of daily closing prices, compute daily returns, and apply Principal Component Analysis (PCA) to study how market-wide factors explain variation in stock movements. Each question builds step-by-step toward the PCA analysis.
+
+```{r setup, include=FALSE}
+# setup chunk configures the R Markdown document
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Environment Setup
+
+```{r q0_setup}
+# Required packages
+# Uncomment to install any that are missing:
+install.packages(c("tidyverse", "lubridate", "inflection"))
+
+library(tidyverse)
+library(readr)
+library(lubridate)
+library(inflection)
+```
+
+# Helper Functions
+
+```{r helpers}
+# Elbow finder function (distance-from-line method)
+find_elbow <- function(x, y) {
+  x <- (x - min(x)) / (max(x) - min(x))
+  y <- (y - min(y)) / (max(y) - min(y))
+  y_smooth <- stats::filter(y, rep(1/3, 3), sides = 2)
+  y_smooth[is.na(y_smooth)] <- y[is.na(y_smooth)]
+  p1 <- c(x[1], y_smooth[1])
+  p2 <- c(x[length(x)], y_smooth[length(y_smooth)])
+  dist <- abs((p2[2] - p1[2]) * x - (p2[1] - p1[1]) * y_smooth + 
+              p2[1]*p1[2] - p2[2]*p1[1]) /
+          sqrt((p2[2] - p1[2])^2 + (p2[1] - p1[1])^2)
+  bias <- seq_along(dist)
+  dist_adj <- dist / sqrt(bias)
+  which.max(dist_adj)
+}
+```
+
+------------------------------------------------------------------------
+
+## Q1 : Load data
+
+**Tasks:**\
+Unzip `stock_data.zip`, which contains historical market data for stocks in the S&P 500 index.\
+The S&P 500 is a stock market index tracking the performance of 500 large companies listed on stock exchanges in the United States.\
+\
+(a) Load the data from the CSV file into an R data frame. It should have 7 columns:\
+*`Date`: the date for a given set of observations\
+`Open`: the price of a given stock on a given date, at opening time on the relevant stock exchange\
+`High`: the highest price reached by a given stock on a given date\
+`Low`: the lowest price reached by a given stock on a given date\
+`Close`: the price of a given stock on a given date, at closing time on the relevant stock exchange\
+`Volume`: the total volume traded for a given stock on a given date\
+`Name`: The stock name*\
+This assignment will use the `Date`, `Close`, and `Name` columns.\
+\
+(b) Use `glimpse` to display a preview of the data.\
+\
+**Hint:** the `readr` package is useful when loading data from files.\
+Ensure that the file path provided is correct relative to the current working directory. If you're unsure, check your working directory in the console using `getwd()`.\
+There is no code explanation needed for Q1.
+
+```{r q1_load_data}
+# YOUR CODE GOES HERE
+# inspiration taken from https://www.datacamp.com/tutorial/r-data-import-tutorial
+df <- read_csv('/home/saif/Downloads/UoL/Assignments/COMP529/stock_data.zip',show_col_types = FALSE)
+
+glimpse(df)
+```
+
+------------------------------------------------------------------------
+
+## Q2 : Distinct tickers
+
+**Tasks:**\
+(a) Identify the set of all unique tickers (from the `Name` column), sorted alphabetically.\
+(b) How many tickers are there?\
+(c) List the first 5 tickers.\
+(d) List the last 5 tickers.
+
+**Hints:**\
+`distinct()`, `arrange()`, and `pull()` may help with part (a).\
+Functions like `length()`, `head()`, and `tail()` will help with parts (b), (c), and (d).
+
+```{r q2_distinct_tickers}
+# YOUR CODE GOES HERE
+
+#all unique tickers from Name column: inspiration taken from r's documentation: ?distinct ?arrange and ?pull
+unique_tickers <- df %>% distinct(Name) %>% arrange(Name) %>% pull(Name)
+
+#how many tickers are there: inspiration taken from ?length
+no_of_unique_tickers <- length(unique_tickers)
+cat("Numnber of unique tickers: ",no_of_unique_tickers,"\n")
+
+# first 5 tickers: inspiration taken from ?head and ?cat
+cat("First 5 tickers: ",head(unique_tickers,5),"\n")
+
+#last 5 tickers: inspiration taken from ?tail and ?cat
+cat("Last 5 tickers: ", tail(unique_tickers,5),"\n")
+```
+
+**Explanation box (do not delete this section):**
+
+```{verbatim}
+# Q2_EXPLANATION
+Explain your code here.
+
+UNIQUE TICKERS
+
+The first line of code retrieves all distinct tickers from the Name column of the data frame. The pipe operator %>% from dplyr takes the output of one function and passes it as input to the next. Starting with df, the code applies the following functions:
+
+distinct(Name) returns only unique values from the Name column, removing duplicates (e.g., a vector such as A, B, A, B, C becomes A, B, C).
+
+arrange(Name) sorts the resulting values in ascending alphabetical order.
+
+pull(Name) extracts the Name column as a simple character vector rather than a data frame.
+
+The final result of this pipeline is assigned to the variable unique_tickers.
+
+COUNTING UNIQUE VALUES
+
+To determine how many unique tickers exist, the code uses the length() function, which returns the number of elements in a vector. This gives the total number of distinct tickers in the dataset.
+
+FIRST AND LAST ELEMENTS
+
+To inspect the beginning and end of the vector, the code uses head(unique_tickers, 5) to display the first five tickers and tail(unique_tickers, 5) to display the last five. The cat() function is used to print these results neatly to the console.
+```
+
+------------------------------------------------------------------------
+
+## Q3 : Filter tickers by coverage
+
+**Tasks:**\
+(a) Remove all tickers whose first available date is after 1st November 2019 or whose last available date is before 31st October 2022.\
+(b) Which tickers were removed? (Display the ticker names.)\
+(c) How many tickers remain?\
+\
+**Hints:** You might want to group the data by `Name` using `group_by()`. Then, consider calculating each ticker’s first and last date with `summarise(min(Date), max(Date))`. You could use `filter()` to compare these dates with the required window. To identify which tickers were kept vs removed, `setdiff()` might be helpful.\
+After filtering out the above names, you should be left with all of the names which have market data for at least the 3 years period 1st November 2019 – 31st October 2022. You should have removed a small number of names: these are stocks which **started trading after 1st November 2019** or **ceased trading before 31st October 2022**. You should be left with close to 500 names. Use these 500-ish names for the rest of the assignment. The names you removed will not be used again, because they don’t have sufficient market data.
+
+```{r q3_filter_tickers}
+# YOUR CODE GOES HERE
+
+df$Date <- as.Date(df$Date)
+
+ticker_dates <- df %>% group_by(Name) %>% summarise( first_date = min(Date, na.rm = TRUE), last_date  = max(Date, na.rm = TRUE) )
+
+start_required <- as.Date("2019-11-01")
+end_required   <- as.Date("2022-10-31")
+
+valid_tickers <- ticker_dates %>% filter(first_date <= start_required, last_date  >= end_required) %>% pull(Name)
+
+removed_tickers <- setdiff(unique(df$Name), valid_tickers)
+
+cat("Number of remaining tickers:", length(valid_tickers), "\n")
+
+
+df_filtered <- df %>% filter(Name %in% valid_tickers)
+
+
+
+```
+
+**Explanation box (do not delete this section):**
+
+```{verbatim}
+# Q3_EXPLANATION
+Explain your code here.
+
+CONVERTING DATE COLUMN
+
+df$Date <- as.Date(df$Date)
+This converts the Date column from character format into Date objects. Working with real Date objects is important because functions like min() and max() only work correctly when the values are actual dates, not text.
+
+FINDING FIRST AND LAST DATES FOR EACH TICKER
+
+ticker_dates <- df %>% group_by(Name) %>% summarise(first_date = min(Date, na.rm = TRUE), last_date = max(Date, na.rm = TRUE))
+This creates a summary table containing, for each unique ticker in the Name column:
+
+the earliest date it appears (first_date)
+
+the latest date it appears (last_date)
+
+group_by(Name) means “group the data by ticker name.”
+summarise() calculates one row per ticker with its first and last trading dates.
+
+SETTING REQUIRED DATE RANGE
+
+start_required <- as.Date("2019-11-01")
+end_required <- as.Date("2022-10-31")
+These lines define the date range required for a ticker to be considered valid. A ticker must appear before (or on) the start date and after (or on) the end date.
+
+FILTERING VALID TICKERS
+
+valid_tickers <- ticker_dates %>% filter(first_date <= start_required, last_date >= end_required) %>% pull(Name)
+This keeps only those tickers that have data covering at least the required start and end dates.
+filter() applies the conditions, and pull(Name) extracts just the list of valid ticker names as a vector.
+
+FINDING REMOVED TICKERS
+
+removed_tickers <- setdiff(unique(df$Name), valid_tickers)
+This finds tickers that were excluded by the filter. setdiff() returns values that are in the first list but not in the second.
+
+CREATING FILTERED DATAFRAME
+
+df_filtered <- df %>% filter(Name %in% valid_tickers)
+This keeps only the rows where the ticker name belongs to the list of valid tickers. All other rows are removed from the dataset.
+```
+
+------------------------------------------------------------------------
+
+## Q4 : Common trading dates
+
+**Tasks:**\
+(a) Identify the set of dates that are common to all remaining tickers.\
+(b) Remove all the dates that are before **1st November 2019 or after 31st October 2022.**
+
+By identifying common dates, we ensure that every stock has data for the same set of days, which is crucial for performing comparisons, statistical analysis, or any kind of multivariate analysis later.\
+\
+(c) How many dates are left?\
+(d) List the first 5 dates\
+(e) List the last 5 dates.\
+\
+**Hints:** `filter()` could be used here. For each date, count how many *distinct* tickers appear using `n_distinct(Name)`.\
+A “common” date is one where the count equals the number of remaining tickers.\
+There are approximately 250 trading days in a year, and the period 1st November 2019 to 31st October 2022 spans 3 years. So, you should be left with approximately 250 \* 3 = 750 dates. The first 5 dates should be close to (but not before) 1st November 2019. The last 5 dates should be close to (but not after) 31st October 2022.
+
+```{r q4_common_dates}
+# YOUR CODE GOES HERE
+
+# Count distinct tickers per date
+date_counts <- df_filtered %>% 
+  group_by(Date) %>% 
+  summarise(n_tickers = n_distinct(Name))
+
+# Total number of valid tickers
+total_tickers <- length(valid_tickers)
+
+# Dates where all tickers are present
+common_dates <- date_counts %>%  
+  filter(n_tickers == total_tickers) %>%  
+  pull(Date)
+
+# Ensure Date class
+common_dates <- as.Date(common_dates, origin = "1970-01-01")
+
+# Required date range
+start_required <- as.Date("2019-11-01")
+end_required   <- as.Date("2022-10-31")
+
+# Filter dates to required range
+common_dates_filtered <- common_dates[
+  common_dates >= start_required & 
+  common_dates <= end_required
+]
+
+# Ensure Date class again (after filtering)
+common_dates_filtered <- as.Date(common_dates_filtered, origin = "1970-01-01")
+
+# Output
+cat("Number of remaining dates:", length(common_dates_filtered), "\n")
+
+# Use print() for proper Date formatting
+print(head(common_dates_filtered, 5))
+print(tail(common_dates_filtered, 5))
+
+```
+
+**Explanation box (do not delete this section):**
+
+```{verbatim}
+# Q4_EXPLANATION
+Explain your code here.
+
+COUNTING DISTINCT TICKERS PER DATE
+date_counts <- df_filtered %>% group_by(Date) %>% summarise(n_tickers = n_distinct(Name))
+This creates a new data frame that counts how many unique tickers appear on each trading date. group_by(Date) groups rows by date, and n_distinct(Name) counts the number of different ticker symbols on that date.
+
+TOTAL NUMBER OF VALID TICKERS
+total_tickers <- length(valid_tickers)
+This calculates how many tickers passed the previous filtering step. We will use this number to identify dates where all tickers are present.
+
+FINDING COMMON DATES
+common_dates <- date_counts %>% filter(n_tickers == total_tickers) %>% pull(Date)
+This keeps only those dates where the number of tickers equals the total number of valid tickers. In other words, it finds the dates that contain data for every ticker. pull(Date) extracts the Date column as a simple vector.
+
+ENSURING DATE CLASS
+common_dates <- as.Date(common_dates, origin = "1970-01-01")
+Since pull() can convert dates into numeric values, this line converts them back to proper Date objects.
+
+APPLYING REQUIRED DATE RANGE
+start_required <- as.Date("2019-11-01")
+end_required <- as.Date("2022-10-31")
+These lines set the earliest and latest acceptable dates.
+
+common_dates_filtered <- common_dates[common_dates >= start_required & common_dates <= end_required]
+This filters the common dates to keep only those within the required date range.
+
+ENSURING DATE CLASS AGAIN
+common_dates_filtered <- as.Date(common_dates_filtered, origin = "1970-01-01")
+This ensures the filtered dates remain in Date format for clean printing.
+
+DISPLAYING RESULTS
+cat("Number of remaining dates:", length(common_dates_filtered), "\n") prints how many dates satisfy the conditions.
+print(head(common_dates_filtered, 5)) and print(tail(common_dates_filtered, 5)) show the first and last few dates in readable Date format.
+```
+
+------------------------------------------------------------------------
+
+## Q5 : Build wide close-price data frame
+
+**Tasks:**\
+(a) Build a new wide data frame (aka *tibble*) that has a column for each of the tickers from Q3 and a row for each of the dates from Q4. The data frame should contain the `Close` values for each corresponding ticker and date.\
+(b) Print the resulting data frame.\
+\
+**Hint:** `pivot_wider()` is useful here.\
+Make sure you include only the **common dates** from Q4, otherwise you will see `NA`s.
+
+```{r q5_close_wide}
+# YOUR CODE GOES HERE
+df_common <- df_filtered %>%  filter(Date %in% common_dates_filtered)
+wide_df <- df_common %>%  select(Date, Name, Close) %>%  pivot_wider(    names_from = Name,    values_from = Close  ) %>%  arrange(Date)
+glimpse(wide_df)
+
+```
+
+**Explanation box (do not delete this section):**
+
+```{verbatim}
+# Q5_EXPLANATION
+Explain your code here.
+
+FILTERING TO COMMON DATES
+
+df_common <- df_filtered %>% filter(Date %in% common_dates_filtered)
+This line keeps only the rows where the Date value appears in the set of common dates. Common dates are those for which every valid ticker has data, ensuring complete time coverage across all tickers.
+
+SELECTING RELEVANT COLUMNS
+
+wide_df <- df_common %>% select(Date, Name, Close) %>% ...
+Here we keep only the three columns needed for reshaping the dataset: the date, the ticker name, and the closing price.
+
+RESHAPING TO WIDE FORMAT
+
+pivot_wider(names_from = Name, values_from = Close)
+pivot_wider() converts the data from a long format, where there are multiple rows per date (one for each ticker), into a wide format, where there is one row per date and separate columns for each ticker.
+
+names_from = Name means each ticker becomes a column name.
+
+values_from = Close means the values in those columns come from the closing price.
+
+SORTING DATES
+
+%>% arrange(Date)
+This sorts the resulting dataset by date in ascending order so that the time series is ordered chronologically.
+
+CHECKING THE STRUCTURE
+
+glimpse(wide_df)
+glimpse() provides a quick summary of the structure of the data frame, showing the column names, number of rows, number of columns, and data types. This is useful to confirm that the reshaping worked as intended.
+```
+
+------------------------------------------------------------------------
+
+## Q6 : Calculate returns
+
+**Tasks:**\
+(a) Create another data frame/tibble containing daily simple returns calculated as:\
+`return(Name, Date) = (Close(Name, Date) - Close(Name, previous Date)) / Close(Name, previous Date)`\
+Note that this dataframe should have one fewer row than the data frame from Q5, because returns can’t be calculated for the first date.\
+(b) Output the data frame with `print()`.\
+\
+**Hints:** `lag()` accesses the previous row’s closing price, also consider `across()` to apply the calculation to all columns except the Date.\
+Remember: `return = (price_t - price_{t-1}) / price_{t-1}`\
+The first row of returns will be `NA` for every stock. `slice()` may be useful.
+
+```{r q6_calculate_returns}
+# YOUR CODE GOES HERE
+returns_df <- wide_df %>%  mutate(    across(      .cols = -Date,      .fns  = ~ ( . - lag(.) ) / lag(.)    )  )
+returns_df <- returns_df %>%  slice(-1)
+print(returns_df)
+
+```
+
+**Explanation box (do not delete this section):**
+
+```{verbatim}
+# Q6_EXPLANATION
+Explain your code here.
+CALCULATING RETURNS
+returns_df <- wide_df %>% mutate(across(.cols = -Date, .fns = ~ ( . - lag(.) ) / lag(.)))
+This line calculates daily returns for every ticker. The function mutate() modifies the existing data frame. The across(.cols = -Date, ...) part means "apply the following function to all columns except Date." The expression ( . - lag(.) ) / lag(.) uses the previous day's value to calculate simple returns.
+
+WHY lag() IS REQUIRED
+lag() returns the value from the previous row in the same column. Returns represent how much a price changed compared to the previous day, so without lag(), there is no reference point for comparison. For example, if today's price is 105 and yesterday's price (lag value) was 100, the return is (105 − 100) / 100 = 0.05 or 5%. Therefore, lag() is required to access the previous price so we can measure the percentage change.
+
+REMOVING THE FIRST ROW
+returns_df <- returns_df %>% slice(-1)
+The first row is removed because there is no previous day to calculate a return for the first date, so the first row will contain missing values after using lag(). slice(-1) drops the first row of the data.
+
+DISPLAYING RESULTS
+print(returns_df)
+This prints the resulting data frame containing the Date column and daily returns for all tickers.
+```
+
+------------------------------------------------------------------------
+
+## Q7 : PCA on returns
+
+**Tasks:**\
+(a) Use the function `prcomp()` to calculate the principal components of the returns from Q6.\
+\
+The PCA loadings show how each ticker contributes to each principal component. Large positive or negative loadings indicate strong influence on that component. PCA helps reveal the main underlying factors that explain variance in stock returns, and is commonly used in finance to identify shared trends across assets.\
+\
+(b) Print the loadings for the top five principal components. The loadings are stored in the `$rotation` matrix of the PCA result (use whatever variable name you assigned the `prcomp()` output to).\
+\
+**Hints:** Remember to remove the Date column and convert the remaining columns to a matrix using `as.matrix()` before running `prcomp()`.\
+You could use `order()` to find the top components.
+
+```{r q7_pca_returns}
+# YOUR CODE GOES HERE
+# Remove Date column and convert to numeric matrix
+returns_matrix <- returns_df %>%  select(-Date) %>%  as.matrix()
+pca_returns <- prcomp(  returns_matrix,  center = TRUE,  scale. = TRUE)
+# Loadings for first 5 PCs
+print(pca_returns$rotation[, 1:5])
+
+```
+
+**Explanation box (do not delete this section):**
+
+```{verbatim}
+# Q7_EXPLANATION
+Write your explanation here.
+
+REMOVING THE DATE COLUMN AND CONVERTING TO A MATRIX
+returns_matrix <- returns_df %>% select(-Date) %>% as.matrix()
+This line keeps all the columns except the Date column, because PCA can only be applied to numerical data. The remaining columns contain daily returns for each ticker. The as.matrix() function converts the data frame into a numeric matrix, which is required by the PCA function prcomp().
+
+RUNNING PCA
+pca_returns <- prcomp(returns_matrix, center = TRUE, scale. = TRUE)
+This performs Principal Component Analysis on the daily returns.
+
+center = TRUE subtracts the mean of each ticker’s returns before running PCA.
+
+scale. = TRUE divides each ticker’s returns by their standard deviation.
+Centering and scaling ensure that all tickers contribute equally to the PCA, regardless of differences in price volatility.
+
+PRINTING PC LOADINGS
+print(pca_returns$rotation[, 1:5])
+The rotation matrix in the PCA output contains the loadings, which show how each ticker contributes to each principal component. Selecting [, 1:5] prints the loadings for the first five principal components. These values indicate which tickers have the strongest influence on each component.
+```
+
+------------------------------------------------------------------------
+
+## Q8 : Explained variance using the elbow method
+
+**Tasks:**\
+(a) Extract the explained variance ratios from the principal components calculated in Q7.\
+(b) What percentage of variance is explained by the first principal component?\
+(c) Plot the first 20 explained variance ratios.\
+(d) Identify an elbow using the helper function **find_elbow()** and mark it on the plot.\
+(e) As well as explaining your code, explain what the elbow represents.\
+\
+**Hints**: The PCA object from Q7 contains standard deviations of each principal component in *your_pca_object*`$sdev`. The variance of each component is the square of these values. The explained variance ratio is each variance divided by the total variance.
+
+The explained variance ratios are stored as a numeric vector, so you can extract the first 20 values using standard indexing - for example, by referencing elements 1:20 of that vector.
+
+To plot the explained variance ratios, you could use `plot()` to create the graph, and then highlight the elbow using `abline()` or `points()` to mark the location returned by `find_elbow()`.
+
+```{r q8_explained_variance}
+# YOUR CODE GOES HERE
+# Extract standard deviations
+sdev <- pca_returns$sdev
+
+# Variances
+variances <- sdev^2
+
+# Explained variance ratios
+explained_var_ratio <- variances / sum(variances)
+
+# (b) First principal component %
+first_pc_var <- explained_var_ratio[1] * 100
+cat("Percent variance explained by PC1:", first_pc_var, "%\n")
+
+# (c) Plot first 20 explained variance ratios
+first20 <- explained_var_ratio[1:20]
+
+plot(
+  x = 1:20,
+  y = first20,
+  type = "b",
+  xlab = "Principal Component",
+  ylab = "Explained Variance Ratio",
+  main = "Explained Variance (first 20 PCs)"
+)
+
+# (d) Find elbow (pass x and y)
+elbow <- find_elbow(1:length(explained_var_ratio), explained_var_ratio)
+
+# Mark elbow on plot
+points(
+  x = elbow,
+  y = explained_var_ratio[elbow],
+  col = "red",
+  pch = 19,
+  cex = 1.5
+)
+
+abline(
+  v = elbow,
+  col = "red",
+  lty = 2
+)
+
+```
+
+**Explanation box (do not delete this section):**
+
+```{verbatim}
+# Q8_EXPLANATION
+Explain your code here, and very briefly explain what the 'elbow' represents.
+
+EXTRACTING STANDARD DEVIATIONS
+sdev <- pca_returns$sdev
+The PCA output contains standard deviations for each principal component. These values show how spread out the transformed data is along each component.
+
+CALCULATING VARIANCES
+variances <- sdev^2
+Variance is the square of the standard deviation. This gives the amount of variation captured by each principal component.
+
+COMPUTING EXPLAINED VARIANCE RATIOS
+explained_var_ratio <- variances / sum(variances)
+This calculates the proportion of total variance explained by each principal component. The values add up to 1 and show how much information each component retains.
+
+PERCENTAGE OF VARIANCE FOR PC1
+first_pc_var <- explained_var_ratio[1] * 100
+This retrieves the variance explained by the first principal component and converts it to a percentage. cat() prints this value.
+
+PLOTTING FIRST 20 COMPONENTS
+first20 <- explained_var_ratio[1:20]
+This selects the first 20 principal components. The plot() function then displays the explained variance ratios against component number, helping to visualize how quickly variance decreases.
+
+FINDING THE ELBOW
+elbow <- find_elbow(1:length(explained_var_ratio), explained_var_ratio)
+This uses a function to detect the "elbow point" of the curve. The elbow is where the explained variance stops dropping steeply and begins to level off.
+
+WHAT THE ELBOW REPRESENTS
+The elbow shows the point where adding more principal components yields diminishing returns. Before the elbow, each added component explains a large amount of additional variance. After the elbow, each component adds only a small amount of new information. In practice, the elbow suggests a reasonable cutoff for how many principal components to keep
+
+MARKING THE ELBOW ON THE PLOT
+points() adds a red dot at the elbow location and abline(v = elbow) draws a vertical dashed line to highlight where the curve bends.
+```
+
+------------------------------------------------------------------------
+
+## Q9 : Cumulative variance
+
+**Tasks:**\
+(a) Calculate the cumulative variance ratios using `cumsum()` on the list of explained variance ratios from Q8.\
+(b) Plot all these cumulative variance ratios (x-axis = principal component, y-axis = cumulative variance ratio).\
+(c) Mark on your plot the principal component for which the cumulative variance ratio is greater than or equal to 95%.\
+\
+**Hints:** you could use `cumsum()` on your explained variance ratio vector to calculate the cumulative variance. This will return a numeric vector, where each value represents the total variance explained up to that principal component. To find where the cumulative variance first exceeds 95%, you might compare the cumulative vector with 0.95 and identify the first index where this condition holds true.
+
+To visualize the cumulative variance, consider `plot()` or `plot(cumulative_vector, type = "l")` to create the plot. To highlight the principal component where the cumulative variance exceeds 95%, you could add a point or vertical line using `points()` or `abline(v = ...)` to mark the location.
+
+```{r q9_cumulative_variance}
+# YOUR CODE GOES HERE
+# (a) Cumulative explained variance
+cumulative_var <- cumsum(explained_var_ratio)
+
+# (b) Plot cumulative variance
+plot(
+  x = 1:length(cumulative_var),
+  y = cumulative_var,
+  type = "l",
+  xlab = "Principal Component",
+  ylab = "Cumulative Variance Ratio",
+  main = "Cumulative Explained Variance"
+)
+
+# (c) Find where cumulative variance >= 95%
+pc_95 <- which(cumulative_var >= 0.95)[1]
+cat("Principal component at 95% cumulative variance:", pc_95, "\n")
+
+# Mark this point on the plot
+points(
+  x = pc_95,
+  y = cumulative_var[pc_95],
+  col = "red",
+  pch = 19,
+  cex = 1.5
+)
+
+abline(
+  v = pc_95,
+  col = "red",
+  lty = 2
+)
+
+```
+
+**Explanation box (do not delete this section):**
+
+```{verbatim}
+# Q9_EXPLANATION
+Explain your code here.
+
+CALCULATING CUMULATIVE VARIANCE
+cumulative_var <- cumsum(explained_var_ratio)
+This line calculates the cumulative explained variance by summing the explained variance ratios one by one using cumsum(). The first value is just PC1, the second value is PC1 + PC2, and so on. This measures how much total variance is captured as more principal components are included.
+
+PLOTTING CUMULATIVE VARIANCE
+plot(x = 1:length(cumulative_var), y = cumulative_var, type = "l", ...)
+This produces a line plot where the x-axis shows the principal component number and the y-axis shows the cumulative explained variance. This visualization helps determine how many components are needed to reach a desired level of total variance.
+
+FINDING THE 95% THRESHOLD
+pc_95 <- which(cumulative_var >= 0.95)[1]
+This line finds the first principal component where the cumulative explained variance is at least 95%. The value 0.95 corresponds to 95% of the total variance in the data. [1] ensures we take the earliest component that reaches this threshold.
+
+PRINTING THE RESULT
+cat("Principal component at 95% cumulative variance:", pc_95, "\n")
+This prints the number of principal components needed to explain at least 95% of the variation in the daily returns.
+
+MARKING THE POINT ON THE PLOT
+points() adds a red marker at the location of pc_95 on the plot, and
+abline(v = pc_95, col = "red", lty = 2) draws a vertical dashed line so that the threshold is clearly visible on the graph.
+
+WHAT THIS REPRESENTS
+The value of pc_95 tells you the minimum number of principal components required to retain 95% of the information (variance) from the original dataset. This is commonly used to choose the dimensionality for PCA-based analysis. In practical financial datasets, if 95% of the variance is reached using only a small number of principal components, it suggests that most of the market variation can be explained by a few common factors, whereas needing many components indicates more complex, diversified sources of risk.
+```
+
+------------------------------------------------------------------------
+
+## Q10 : Standardised returns
+
+**Tasks:**\
+(a) **Standardise** your returns data frame from Q6 so that each ticker column has *zero mean* and *unit variance*. (Do not include the `Date` column.)\
+(b) Repeat Q7 for this new standardised returns matrix.\
+(c) Repeat Q8 for this standardised PCA.\
+(d) Repeat Q9 for this standardised PCA.\
+(e) In the Explanation box, **explain why standardising the returns before PCA can be useful** and how it affects the interpretation of the principal components.
+
+**Hints:** `scale()` may be useful here.\
+Standardising removes differences in volatility between tickers so that PCA focuses on their *correlation structure* rather than raw variance.
+
+```{r q10_standardised_returns}
+# YOUR CODE GOES HERE
+
+### (a) Standardise returns
+returns_scaled_df <- returns_df %>%
+  mutate(
+    across(
+      .cols = -Date,
+      .fns  = ~ scale(.) %>% as.vector()
+    )
+  )
+
+### (b) Standardised PCA
+returns_scaled_matrix <- returns_scaled_df %>%
+  select(-Date) %>%
+  as.matrix()
+
+pca_scaled <- prcomp(
+  returns_scaled_matrix,
+  center = TRUE,
+  scale. = FALSE
+)
+
+### ----------------------------------------------------------
+### Repeat Q7: print loadings for first 5 principal components
+### ----------------------------------------------------------
+
+cat("Standardised PCA loadings (first 5 PCs):\n")
+print(pca_scaled$rotation[, 1:5])
+
+### ----------------------------------------------------------
+### Repeat Q8: explained variance analysis
+### ----------------------------------------------------------
+
+# Standard deviations, variances, explained variance ratio
+sdev_scaled <- pca_scaled$sdev
+variances_scaled <- sdev_scaled^2
+explained_var_scaled <- variances_scaled / sum(variances_scaled)
+
+# (b) Percentage variance explained by PC1 (scaled)
+first_pc_var_scaled <- explained_var_scaled[1] * 100
+cat("Percent variance explained by PC1 (scaled):",
+    first_pc_var_scaled, "%\n")
+
+# (c) Plot first 20 explained variance ratios (scaled)
+plot(
+  x = 1:20,
+  y = explained_var_scaled[1:20],
+  type = "b",
+  xlab = "Principal Component",
+  ylab = "Explained Variance Ratio",
+  main = "Explained Variance (first 20 PCs, scaled)"
+)
+
+# (d) Elbow detection (scaled)
+elbow_scaled <- find_elbow(1:length(explained_var_scaled), explained_var_scaled)
+
+# Mark elbow on plot
+points(
+  x = elbow_scaled,
+  y = explained_var_scaled[elbow_scaled],
+  col = "red",
+  pch = 19,
+  cex = 1.5
+)
+
+abline(
+  v = elbow_scaled,
+  col = "red",
+  lty = 2
+)
+
+cat("Elbow location (scaled):", elbow_scaled, "\n")
+
+### ----------------------------------------------------------
+### Repeat Q9: cumulative explained variance analysis
+### ----------------------------------------------------------
+
+# (a) Cumulative explained variance (scaled)
+cumulative_scaled <- cumsum(explained_var_scaled)
+
+# (b) Plot cumulative variance (scaled)
+plot(
+  x = 1:length(cumulative_scaled),
+  y = cumulative_scaled,
+  type = "l",
+  xlab = "Principal Component",
+  ylab = "Cumulative Variance Ratio",
+  main = "Cumulative Explained Variance (scaled)"
+)
+
+# (c) Find PC for 95% cumulative variance (scaled)
+pc95_scaled <- which(cumulative_scaled >= 0.95)[1]
+cat("PC where cumulative variance reaches 95% (scaled):", pc95_scaled, "\n")
+
+# Mark on plot
+points(
+  x = pc95_scaled,
+  y = cumulative_scaled[pc95_scaled],
+  col = "red",
+  pch = 19,
+  cex = 1.5
+)
+
+abline(
+  v = pc95_scaled,
+  col = "red",
+  lty = 2
+)
+
+```
+
+**Explanation box (do not delete this section):**
+
+```{verbatim}
+# Q10_EXPLANATION
+Explain why standardising before PCA is useful, and how it changes the PCA results.
+
+Standardising before performing PCA is useful because PCA is sensitive to the scale of the variables. In a financial returns dataset, different tickers naturally have different volatilities. Stocks with larger fluctuations (higher variance) produce larger numerical values, which can dominate the covariance matrix and therefore have a disproportionate influence on the principal components. By standardising each ticker column to have mean zero and unit variance, all tickers contribute equally to the PCA, regardless of how volatile they are.
+
+This change affects the PCA results in a measurable way. Without standardisation, the first principal component is usually driven by the most volatile stocks, and the explained variance ratios can be skewed toward those tickers. After standardisation, the loadings reflect common patterns across all tickers rather than being dominated by a few large-magnitude series. As a result, the principal components capture underlying market structure more fairly, and the number of components needed to reach a given cumulative variance (such as 95%) often becomes larger because each standardised ticker has equal weight. Standardisation therefore produces a more balanced and interpretable PCA, especially when comparing behaviour across multiple assets.
+
+In this dataset, PCA on standardised returns yields the same number of components to reach 95% cumulative variance as PCA on raw returns, because daily asset returns already have similar scales and near-zero means, so standardisation does not substantially change the correlation structure of the data.
+```
+
+------------------------------------------------------------------------
+
+## Q11 : COMP529 Research Problem Question
+
+**Task:**\
+Financial datasets often come from multiple providers, and the same company may appear under different names or identifiers (e.g. "Google", "Alphabet", "GOOG", "GOOGL").\
+This challenge - known as **entity alignment** - was introduced in Week 8 of the lectures and is an active research problem in Big Data.
+
+Write **250–300 words** explaining:
+
+1.  **What entity alignment is**, and why it is difficult in large, heterogeneous datasets.
+2.  **Why misaligned or duplicated entities can distort PCA-based market analysis**, especially when constructing price panels or computing covariance matrices.
+3.  **One recent peer-reviewed paper** that proposes a solution to the entity-alignment problem (e.g., using embeddings, graph methods, or LLM-based techniques).
+4.  A short description of **how improved entity alignment would lead to more reliable PCA results** in practical financial analytics.
+
+You only need **one** reference. Focus on clarity and explanation.\
+\
+**Hint:** If you are unsure where to start, try searching **Google Scholar** for terms like *entity alignment*, *entity matching*, *record linkage*, or *knowledge graph alignment*. Choose any one paper that explains a method (for example, using embeddings, graph neural networks, or transformer models). You do not need to understand every mathematical detail - aim to explain the main idea in your own words and why it helps match entities correctly in large datasets.
+
+**Explanation box:**
+
+```{verbatim}
+# Q11_EXPLANATION 
+Write your approx 250–300 word discussion here, including at least one reference.
+
+Entity Alignment is the task of identifying when distinct records refer to the same real world object so they can be merged consistently. In large, heterogeneous datasets, this is difficult because data often comes from multiple sources using different naming conventions, schemas, or structural representations. In financial data, for example, the same company may appear as “Alphabet,” “Google,” “GOOGL,” or “GOOG” across different providers. Without alignment, such duplicates introduce redundant time series into price panels. When covariance matrices are constructed using misaligned data, the result is artificial correlation structure in the covariance matrix, which leads PCA to extract principal components based on duplicated variation rather than genuine market factors. This leads PCA to extract principal components that reflect data duplication rather than true latent risk factors.
+
+Recent entity alignment research leverages representation learning, graph structures, and embeddings to improve matching accuracy. One peer-reviewed solution is the Global Alignment and Local Information Aggregation (GALA) model. GALA constructs global features using entity embeddings and forces the embedding distributions of two datasets to align. Unlike earlier models that focus primarily on local neighborhood features, GALA explores the full topology of the knowledge graphs through its global alignment strategy, enabling it to align entities that are structurally distant from the few labeled entity pairs ('anchor pairs') used as initial matches. The model then performs iterative local aggregation, updating entity embeddings and confidence scores by incorporating information from neighboring entities. This semi supervised design improves alignment accuracy while mitigating the error propagation problems of models that rely on fixed labels.
+
+Although GALA is developed for knowledge graphs, the underlying principle applies directly to financial analytics. Improved entity alignment ensures that each company is represented only once in the price panel. This yields cleaner covariance matrices and allows PCA to identify components driven by genuine market dynamics rather than duplicated identifiers, resulting in more reliable and interpretable models for practical financial decision making.
+
+**Reference:**  
+Liu, X., et al. “Semi-Supervised Entity Alignment With Global Alignment and Local Information Aggregation,” *IEEE Transactions on Knowledge and Data Engineering*, vol. 35, no. 10, pp. 10169–10181, Oct. 2023, doi: 10.1109/TKDE.2022.3223969.
+```
+
+\
