@@ -17,14 +17,14 @@
 \begin{document}
 
 \maketitle
-
-\section{Problem Formulation}
+\section{Defintions}
+\subsection{Problem Modelling}
 
 The objective of this study is to predict patient diagnostic outcomes using demographic and clinical variables. The dataset contains measurements related to sleep quality, fatigue severity, stress levels, and behavioural indicators. The target variable \textit{diagnosis} contains three categories: \textit{Depression}, \textit{CI}, and \textit{Both}. Consequently, the task is formulated as a supervised multiclass classification problem.
 
 The dataset initially contained 670 observations and 19 variables. The aim is to determine whether the available demographic and clinical variables can accurately predict diagnostic outcomes.
 
-\section{Data Analysis and Feature Selection}
+\subsection{Data Analysis and Feature Selection}
 
 Initial exploration confirmed that the dataset contains no missing values and no duplicate observations. The dataset size is relatively small to moderate, making classical machine learning models more appropriate than deep learning approaches.
 
@@ -124,7 +124,7 @@ After removing this variable, Cramér's V values among the remaining categorical
 
 Overall, the feature screening process removed the identifier column, the constant feature, the invalid PHQ-9 observation, the highly redundant sleep-related variable, and the leakage-prone \textit{pem\_present} variable. The resulting feature set was considered suitable for modelling.
 
-\section{Experimental Protocol}
+\subsection{Experimental Protocol}
 
 To ensure reliable model evaluation, the dataset was divided into training and testing subsets using an 80/20 stratified train--test split. Stratification preserves class distribution across both subsets.
 
@@ -134,40 +134,23 @@ Machine learning models require numerical inputs; therefore, categorical variabl
 
 To prevent data leakage, encoding and scaling were implemented within a preprocessing pipeline and applied during cross-validation rather than to the full dataset prior to splitting.
 
-\section{Modelling Framework}
-
-This section summarises the modelling approach, preprocessing decisions, experimental protocol, selected machine learning methods, and hyperparameter tuning strategy used in this study.
-
-\subsection{Problem Modelling}
-
-The task was formulated as a supervised multiclass classification problem. The objective is to predict the patient diagnosis category (\textit{Depression}, \textit{CI}, or \textit{Both}) using demographic, behavioural, and clinical features. Since the target variable contains three discrete classes, classification algorithms capable of handling multiclass outputs were required.
-
-\subsection{Decisions Based on Data Analysis}
-
-Exploratory data analysis guided several preprocessing decisions. The identifier column \textit{id} was removed because it does not contain predictive information. The variable \textit{country} was removed as it was constant across all observations. An invalid value in \textit{depression\_phq9\_score} (99) was identified and removed based on the known clinical range of the PHQ-9 scale.
-
-Correlation analysis revealed a strong relationship between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}, and the latter was removed to reduce redundancy. Cramér's V analysis identified \textit{pem\_present} as a leakage variable with perfect association with the target variable, and it was therefore removed to prevent artificially inflated model performance.
-
-\subsection{Experimental Protocol}
-
-The dataset was divided into training and testing subsets using an 80/20 stratified train--test split to ensure reliable model evaluation. Stratification preserves the class distribution of the target variable across both subsets.
-
-Model selection and hyperparameter tuning were performed using stratified 5-fold cross-validation on the training set. Macro F1-score was selected as the primary evaluation metric to ensure balanced performance across classes.
-
 \subsection{Selected Machine Learning Methods}
 
 Three machine learning algorithms discussed during the lectures were evaluated: Logistic Regression, k-Nearest Neighbours (KNN), and Random Forest.
 
 Logistic Regression provides a linear baseline classifier. KNN represents a distance-based learning approach relying on local neighbourhood similarity. Random Forest is an ensemble tree-based method capable of capturing nonlinear relationships and feature interactions. Comparing these models allows investigation of whether linear decision boundaries, local instance similarity, or nonlinear ensemble structures best explain the diagnostic outcomes.
 
-\subsection{Hyperparameter Search Protocol}
-
-Hyperparameter tuning was performed using grid search combined with stratified 5-fold cross-validation. For Logistic Regression, the regularisation strength parameter $C$ was tuned. For KNN, the number of neighbours $k$ was varied to control the degree of smoothing in local classification decisions. For Random Forest, the number of trees and maximum tree depth were tuned to balance model complexity and generalisation performance. The configuration achieving the highest cross-validated Macro F1-score was selected for each model.
-
-
-\section{Hyperparameter Search}
+\subsection{Hyperparameter Search}
 
 Hyperparameter tuning was performed using grid search within stratified 5-fold cross-validation. Stratification ensures that each fold preserves the class distribution of the target variable, which is important given the moderate class imbalance observed in the dataset. This approach provides a reliable estimate of model performance while preventing overfitting to a single validation split. Table~\ref{tab:hyperparameters} summarises the search spaces and best configurations obtained during model selection.
+
+\section{Results}
+\subsection{Decisions Based on Data Analysis}
+
+Exploratory data analysis guided several preprocessing decisions. The identifier column \textit{id} was removed because it does not contain predictive information. The variable \textit{country} was removed as it was constant across all observations. An invalid value in \textit{depression\_phq9\_score} (99) was identified and removed based on the known clinical range of the PHQ-9 scale.
+
+Correlation analysis revealed a strong relationship between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}, and the latter was removed to reduce redundancy. Cramér's V analysis identified \textit{pem\_present} as a leakage variable with perfect association with the target variable, and it was therefore removed to prevent artificially inflated model performance.
+
 
 \begin{table}[H]
 \centering
@@ -188,7 +171,7 @@ The hyperparameter search results are summarised in Table~\ref{tab:hyperparamete
 
 Random Forest achieved the highest cross-validated Macro F1-score of 0.947 with $n\_estimators=500$ and $max\_depth=10$. This indicates that nonlinear relationships and feature interactions play an important role in predicting diagnosis. Consequently, Random Forest was selected for final evaluation on the test set.
 
-\section{Model Comparison}
+\subsection{Model Comparison}
 
 Table~\ref{tab:modelcomparison} summarises the cross-validated Macro F1-scores of the three candidate models.
 
