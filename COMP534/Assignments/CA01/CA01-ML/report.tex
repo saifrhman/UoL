@@ -138,19 +138,30 @@ To prevent data leakage, encoding and scaling were implemented within a preproce
 
 This section summarises the modelling approach, preprocessing decisions, experimental protocol, selected machine learning methods, and hyperparameter tuning strategy used in this study.
 
-\textbf{Problem Modelling.}  
+\subsection{Problem Modelling}
+
 The task was formulated as a supervised multiclass classification problem. The objective is to predict the patient diagnosis category (\textit{Depression}, \textit{CI}, or \textit{Both}) using demographic, behavioural, and clinical features. Since the target variable contains three discrete classes, classification algorithms capable of handling multiclass outputs were required.
 
-\textbf{Decisions Based on Data Analysis.}  
-Exploratory data analysis guided several preprocessing decisions. The identifier column \textit{id} was removed because it does not contain predictive information. The variable \textit{country} was removed as it was constant across all observations. An invalid value in \textit{depression\_phq9\_score} (99) was identified and removed based on the known clinical range of the PHQ-9 scale. Correlation analysis revealed a strong relationship between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}, and the latter was removed to reduce redundancy. Cramér's V analysis identified \textit{pem\_present} as a leakage variable with perfect association with the target variable, and it was therefore removed to prevent artificially inflated model performance.
+\subsection{Decisions Based on Data Analysis}
 
-\textbf{Experimental Protocol.}  
-To ensure reliable model evaluation, the dataset was divided into training and testing subsets using an 80/20 stratified train--test split. Stratification preserves the class distribution of the target variable across both subsets. Model selection and hyperparameter tuning were performed using stratified 5-fold cross-validation on the training set. Macro F1-score was used as the primary evaluation metric to ensure balanced performance across classes.
+Exploratory data analysis guided several preprocessing decisions. The identifier column \textit{id} was removed because it does not contain predictive information. The variable \textit{country} was removed as it was constant across all observations. An invalid value in \textit{depression\_phq9\_score} (99) was identified and removed based on the known clinical range of the PHQ-9 scale.
 
-\textbf{Selected Machine Learning Methods.}  
-Three machine learning algorithms discussed during the lectures were evaluated: Logistic Regression, k-Nearest Neighbours (KNN), and Random Forest. Logistic Regression provides a linear baseline classifier, KNN represents a distance-based learning approach relying on local neighbourhood similarity, and Random Forest is an ensemble tree-based method capable of capturing nonlinear relationships and feature interactions. Comparing these models allows investigation of whether linear decision boundaries, local instance similarity, or nonlinear ensemble structures best explain the diagnostic outcomes.
+Correlation analysis revealed a strong relationship between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}, and the latter was removed to reduce redundancy. Cramér's V analysis identified \textit{pem\_present} as a leakage variable with perfect association with the target variable, and it was therefore removed to prevent artificially inflated model performance.
 
-\textbf{Hyperparameter Search Protocol.}  
+\subsection{Experimental Protocol}
+
+The dataset was divided into training and testing subsets using an 80/20 stratified train--test split to ensure reliable model evaluation. Stratification preserves the class distribution of the target variable across both subsets.
+
+Model selection and hyperparameter tuning were performed using stratified 5-fold cross-validation on the training set. Macro F1-score was selected as the primary evaluation metric to ensure balanced performance across classes.
+
+\subsection{Selected Machine Learning Methods}
+
+Three machine learning algorithms discussed during the lectures were evaluated: Logistic Regression, k-Nearest Neighbours (KNN), and Random Forest.
+
+Logistic Regression provides a linear baseline classifier. KNN represents a distance-based learning approach relying on local neighbourhood similarity. Random Forest is an ensemble tree-based method capable of capturing nonlinear relationships and feature interactions. Comparing these models allows investigation of whether linear decision boundaries, local instance similarity, or nonlinear ensemble structures best explain the diagnostic outcomes.
+
+\subsection{Hyperparameter Search Protocol}
+
 Hyperparameter tuning was performed using grid search combined with stratified 5-fold cross-validation. For Logistic Regression, the regularisation strength parameter $C$ was tuned. For KNN, the number of neighbours $k$ was varied to control the degree of smoothing in local classification decisions. For Random Forest, the number of trees and maximum tree depth were tuned to balance model complexity and generalisation performance. The configuration achieving the highest cross-validated Macro F1-score was selected for each model.
 
 
