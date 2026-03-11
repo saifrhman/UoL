@@ -55,13 +55,13 @@ Inspection of the dataset revealed that the \textit{id} variable represents a un
 
 A statistical summary of the numerical variables revealed that \textit{depression\_phq9\_score} contained a value of 99, which lies outside the valid clinical range (0--27) of the PHQ-9 depression scale. This observation was treated as an invalid entry and removed, resulting in a dataset containing 669 observations.
 
-Several visualisation techniques were used to analyse the dataset. Histograms and violin plots were generated to examine distributional properties such as shape, symmetry, and density concentration. Most numerical variables exhibited smooth bounded distributions across their respective scales without evidence of extreme multimodality. In particular, most continuous variables, such as age, sleep quality indices, stress level, brain fog level, and physical pain score, displayed relatively smooth distributions, while discrete variables such as \textit{depression\_phq9\_score} and \textit{pem\_duration\_hours} showed step-like patterns consistent with integer-valued measurements.
+Several visualisation techniques were used to analyse the dataset. Histograms and violin plots were used to examine the distribution of numerical variables, while boxplots were used to identify potential outliers using the interquartile range criterion. Most variables exhibited smooth bounded distributions without evidence of extreme multimodality. Discrete variables such as \textit{depression\_phq9\_score} and \textit{pem\_duration\_hours} displayed step-like patterns consistent with integer-valued measurements.
 
-Boxplots were used to identify potential outliers using the interquartile range criterion. Although some values were detected outside the whisker boundaries for \textit{fatigue\_severity\_scale\_score} and \textit{depression\_phq9\_score}, these observations remained within the clinically valid ranges specified by the dataset description. Strip plots were further used to confirm the observed minima and maxima of these variables, indicating that these were legitimate observations rather than anomalous measurement errors.
+Although some values appeared outside whisker boundaries in the boxplots, inspection confirmed that these observations remained within clinically valid ranges and were therefore retained.
 
-Scatterplots were used to investigate relationships between selected numerical variables. For example, the relationship between stress level and fatigue severity suggested that fatigue severity tends to be higher for the \textit{CI} and \textit{Both} diagnostic groups, while stress levels were distributed more broadly across all classes. This indicates that stress alone is unlikely to be a strong discriminator of diagnosis.
+Scatterplots were used to explore relationships between numerical variables and diagnosis classes. For example, fatigue severity tended to be higher for the \textit{CI} and \textit{Both} groups, whereas stress levels were distributed across all classes.
 
-Class distribution analysis revealed moderate class imbalance, with the \textit{Depression} and \textit{CI} classes containing a similar number of observations, whereas the \textit{Both} class contained fewer samples. Although the imbalance is not severe, it is sufficient to influence model evaluation. Figure~\ref{fig:classdist} illustrates the class distribution and motivates the use of stratified sampling in the experimental protocol.
+Class distribution analysis revealed moderate imbalance, with the \textit{Both} class containing fewer observations (Figure~\ref{fig:classdist}). This motivated the use of stratified sampling in the experimental protocol.
 
 \begin{figure}[H]
 \centering
@@ -74,7 +74,9 @@ These exploratory analyses provided insight into the structure of the dataset an
 
 \subsection{Correlation and Redundancy Analysis}
 
-A Pearson correlation heatmap was generated to examine relationships among numerical variables, shown in Figure~\ref{fig:pearsonheatmap}. A very strong correlation ($r = 0.97$) was observed between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}. Since highly correlated variables introduce redundancy and may negatively affect linear models, further analysis was performed.
+\subsection{Correlation and Redundancy Analysis}
+
+A Pearson correlation heatmap was used to analyse relationships among numerical variables (Figure~\ref{fig:pearsonheatmap}). A very strong correlation ($r = 0.97$) was observed between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}, indicating substantial redundancy between the two variables. Highly correlated predictors can introduce multicollinearity and provide limited additional information for many machine learning models.
 
 \begin{figure}[H]
 \centering
@@ -83,7 +85,7 @@ A Pearson correlation heatmap was generated to examine relationships among numer
 \label{fig:pearsonheatmap}
 \end{figure}
 
-To formally assess whether both sleep-related variables contributed useful discriminatory information, point plots and one-way ANOVA tests were conducted across diagnosis groups. Neither variable showed statistically significant mean differences across the three diagnostic categories. However, \textit{sleep\_quality\_index} showed marginally stronger group separation and a slightly stronger statistical signal. Therefore, \textit{deep\_sleep\_quality\_index} was removed to reduce multicollinearity while retaining the more informative variable. Aside from this pair, the numerical variables exhibited only weak to moderate correlations, indicating that the remaining features captured largely distinct aspects of patient health.
+To assess whether both variables contributed useful discriminatory information, point plots and one-way ANOVA tests were conducted across diagnosis groups. Neither variable showed statistically significant mean differences across classes. However, \textit{sleep\_quality\_index} exhibited slightly clearer group separation, and therefore \textit{deep\_sleep\_quality\_index} was removed. Aside from this pair, the remaining numerical variables showed only weak to moderate correlations.
 
 \subsection{Categorical Association Analysis}
 
@@ -109,13 +111,11 @@ pem\_present & 1.000 \\
 \label{tab:cramersv}
 \end{table}
 
-The results indicate negligible to weak associations for most categorical predictors. Specifically, \textit{gender} (0.013) and \textit{meditation\_or\_mindfulness} (0.029) show almost no association with the diagnosis variable, while \textit{work\_status} (0.082), \textit{exercise\_frequency} (0.084), and \textit{social\_activity\_level} (0.103) exhibit weak relationships.
+The results indicate weak associations between most categorical predictors and the diagnosis variable. For example, \textit{gender} and \textit{meditation\_or\_mindfulness} show almost no relationship with diagnosis, while \textit{work\_status}, \textit{exercise\_frequency}, and \textit{social\_activity\_level} exhibit only weak associations.
 
-However, the variable \textit{pem\_present} exhibits a perfect association with the target variable ($V = 1.000$). Such a value indicates that the feature deterministically partitions the diagnosis categories. Examination of the contingency table confirmed that each value of \textit{pem\_present} corresponds exclusively to specific diagnosis classes, with no overlap between categories.
+However, \textit{pem\_present} shows a perfect association with the diagnosis variable ($V = 1.000$). This indicates that the feature deterministically separates the diagnosis categories and therefore represents target leakage. Including such a variable would artificially inflate model performance. Consequently, \textit{pem\_present} was removed prior to model training.
 
-This indicates that \textit{pem\_present} encodes target-related information and therefore constitutes data leakage. Including such a variable during model training would artificially inflate predictive performance without reflecting genuine predictive relationships. Consequently, \textit{pem\_present} was removed from the feature set prior to model training.
-
-After removing \textit{pem\_present}, Cramér's V was computed among the remaining categorical predictors to evaluate pairwise associations between variables. Figure~\ref{fig:cramerheatmap} shows that all off-diagonal associations are negligible ($V < 0.10$), indicating no evidence of redundancy or deterministic relationships among the retained categorical variables.
+After removing this variable, Cramér's V values among the remaining categorical predictors were negligible ($V < 0.10$), indicating no strong associations between retained features.
 
 \begin{figure}[H]
 \centering
@@ -194,13 +194,9 @@ Random Forest & $n\_estimators \in \{200, 500\}$, $max\_depth \in \{None, 10, 20
 \label{tab:hyperparameters}
 \end{table}
 
-The hyperparameter ranges were selected to balance model flexibility and computational efficiency. For Logistic Regression, the search focused on the regularisation strength parameter $C$. For KNN, the number of neighbours was tuned in order to control the degree of smoothing in local decision-making. For Random Forest, the grid explored both the ensemble size and the maximum tree depth.
+The hyperparameter search results are summarised in Table~\ref{tab:hyperparameters}. Logistic Regression achieved a Macro F1-score of 0.774 with $C=10$, indicating that weaker regularisation improved performance. The KNN model achieved a lower score of 0.548 with $k=11$, suggesting that local neighbourhood similarity alone was insufficient to separate the classes effectively.
 
-The hyperparameter search results presented in Table~\ref{tab:hyperparameters} show clear differences in model performance. For Logistic Regression, the optimal value of the regularisation strength parameter was $C = 10$, producing a cross-validated Macro F1-score of 0.774. This suggests that a relatively lower level of regularisation allowed the linear model to better capture relationships between predictors and diagnostic outcomes.
-
-For the k-Nearest Neighbours model, the best-performing configuration used $k = 11$, yielding a Macro F1-score of 0.548. The comparatively lower performance indicates that local neighbourhood similarity alone was insufficient to adequately separate the diagnostic classes.
-
-The Random Forest model achieved the highest cross-validated Macro F1-score of 0.947, with an optimal configuration of $n\_estimators = 500$ and $max\_depth = 10$. This strong result suggests that nonlinear relationships and feature interactions play a substantial role in predicting diagnosis. Based on these results, Random Forest was selected as the final candidate model for evaluation on the unseen test set.
+Random Forest achieved the highest cross-validated Macro F1-score of 0.947 with $n\_estimators=500$ and $max\_depth=10$. This indicates that nonlinear relationships and feature interactions play an important role in predicting diagnosis. Consequently, Random Forest was selected for final evaluation on the test set.
 
 \section{Model Comparison}
 
@@ -267,10 +263,10 @@ The consistency between cross-validation performance and held-out test performan
 
 \section{Conclusion}
 
-This study investigated the use of machine learning techniques to predict diagnostic outcomes based on patient demographic and clinical variables. Through comprehensive exploratory data analysis, feature screening, and systematic model comparison, Random Forest was identified as the most effective algorithm.
+This study evaluated machine learning methods for predicting diagnostic outcomes using demographic and clinical variables. Exploratory data analysis and feature screening were used to remove redundant and leakage-prone variables before modelling.
 
-The final model achieved strong predictive performance on unseen data, demonstrating that ensemble tree-based methods are well suited for structured healthcare datasets in which nonlinear relationships and feature interactions are present.
+Among the evaluated methods, Random Forest achieved the best performance, indicating that nonlinear relationships and feature interactions are important for this task. The final model demonstrated strong performance on the held-out test set, suggesting good generalisation.
 
-Future work could explore additional ensemble methods, alternative feature engineering strategies, or larger datasets in order to further improve predictive performance.
+Future work could explore additional ensemble methods, alternative feature engineering strategies, or larger datasets to further improve predictive performance.
 
 \end{document}
