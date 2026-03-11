@@ -1,0 +1,4 @@
+n,Best Policy,Runner-Up Policy,Final Avg Reward,AUC Avg Reward,Std Avg Reward,Final % Optimal,AUC % Optimal,Std % Optimal
+5,ε-greedy (ε=0.01),ε-greedy (ε=0.1),1.1101,1.048,0.0741,84.7,75.85,7.7
+10,ε-greedy (ε=0.1),ε-greedy (ε=0.01),1.3908,1.3538,0.0967,83.6,77.1,9.78
+20,ε-greedy (ε=0.1),ε-greedy (ε=0.01),1.6581,1.6024,0.1523,78.65,67.54,14.21
