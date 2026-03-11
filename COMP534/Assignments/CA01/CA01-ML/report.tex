@@ -74,8 +74,6 @@ These exploratory analyses provided insight into the structure of the dataset an
 
 \subsection{Correlation and Redundancy Analysis}
 
-\subsection{Correlation and Redundancy Analysis}
-
 A Pearson correlation heatmap was used to analyse relationships among numerical variables (Figure~\ref{fig:pearsonheatmap}). A very strong correlation ($r = 0.97$) was observed between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}, indicating substantial redundancy between the two variables. Highly correlated predictors can introduce multicollinearity and provide limited additional information for many machine learning models.
 
 \begin{figure}[H]
@@ -155,25 +153,6 @@ Three machine learning algorithms discussed during the lectures were evaluated: 
 \textbf{Hyperparameter Search Protocol.}  
 Hyperparameter tuning was performed using grid search combined with stratified 5-fold cross-validation. For Logistic Regression, the regularisation strength parameter $C$ was tuned. For KNN, the number of neighbours $k$ was varied to control the degree of smoothing in local classification decisions. For Random Forest, the number of trees and maximum tree depth were tuned to balance model complexity and generalisation performance. The configuration achieving the highest cross-validated Macro F1-score was selected for each model.
 
-\section{Machine Learning Methods}
-
-Three classification algorithms discussed during lectures were selected for comparison:
-
-\begin{itemize}
-\item Logistic Regression
-\item k-Nearest Neighbours (KNN)
-\item Random Forest
-\end{itemize}
-
-These models were chosen because they represent distinct machine learning paradigms.
-
-Logistic Regression is a linear classifier that models the relationship between predictors and class probabilities. It provides an interpretable baseline and is useful for assessing whether the problem can be explained adequately by approximately linear decision boundaries.
-
-KNN is a distance-based instance learning method that classifies an observation using the labels of nearby training examples. It was selected to investigate whether local neighbourhood similarity in the feature space is informative for diagnosis prediction.
-
-Random Forest is an ensemble tree-based method that combines multiple decision trees to capture nonlinear relationships and higher-order feature interactions. It is well suited for structured tabular datasets and often performs strongly when complex dependencies are present.
-
-Comparing these three models therefore allows evaluation of whether linear structure, local similarity, or nonlinear ensemble interactions best explain the diagnostic outcomes.
 
 \section{Hyperparameter Search}
 
