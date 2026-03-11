@@ -17,11 +17,16 @@
 \begin{document}
 
 \maketitle
-\section{Defintions}
+\section{Definitions}
 \subsection{Problem Modelling}
 
-The objective of this study is to predict patient diagnostic outcomes using demographic and clinical variables. The dataset contains measurements related to sleep quality, fatigue severity, stress levels, and behavioural indicators. The target variable \textit{diagnosis} contains three categories: \textit{Depression}, \textit{CI}, and \textit{Both}. Consequently, the task is formulated as a supervised multiclass classification problem.
+The objective of this study is to predict patient diagnostic outcomes using demographic and clinical variables. The dataset contains measurements related to sleep quality, fatigue severity, stress levels, and behavioural indicators. The target variable diagnosis contains three categories: Depression, CI, and Both. Consequently, the task is formulated as a supervised multiclass classification problem.
 
+\bigskip
+
+The choice of classification over alternative modelling approaches is justified as follows. Regression is inappropriate because the target variable is categorical and does not possess a meaningful numerical scale or natural ordering between categories, predicting a continuous value would have no clinical interpretation in this context. Clustering is also unsuitable because the diagnostic labels are already known for all observations; unsupervised methods are intended for settings where class membership is unknown and must be inferred from the data alone. Since the goal is to assign each patient to one of three predefined diagnostic categories based on labelled training data, supervised classification is the appropriate modelling framework.
+
+\bigskip
 The dataset initially contained 670 observations and 19 variables. The aim is to determine whether the available demographic and clinical variables can accurately predict diagnostic outcomes.
 
 \subsection{Data Analysis and Feature Selection}
@@ -167,13 +172,13 @@ Random Forest & $n\_estimators \in \{200, 500\}$, $max\_depth \in \{None, 10, 20
 \label{tab:hyperparameters}
 \end{table}
 
-The hyperparameter search results are summarised in Table~\ref{tab:hyperparameters}. Logistic Regression achieved a Macro F1-score of 0.774 with $C=10$, indicating that weaker regularisation improved performance. The KNN model achieved a lower score of 0.548 with $k=11$, suggesting that local neighbourhood similarity alone was insufficient to separate the classes effectively.
+The hyperparameter search results are summarised in Table~\ref{tab:hyperparameters}. Logistic Regression achieved a Macro F1-score of 0.774 with $C=10$, indicating that weaker regularisation improved performance. 
+
+The KNN model achieved a lower score of 0.548 with $k=11$, suggesting that local neighbourhood similarity alone was insufficient to separate the classes effectively.Additionally, the feature space in this dataset is heterogeneous, containing a mix of numerical and encoded categorical variables with different scales and distributions, which further distorts distance calculations. The relatively large optimal k = 11 also suggests that the decision boundaries are not well-captured by local neighbourhood structure alone.
 
 Random Forest achieved the highest cross-validated Macro F1-score of 0.947 with $n\_estimators=500$ and $max\_depth=10$. This indicates that nonlinear relationships and feature interactions play an important role in predicting diagnosis. Consequently, Random Forest was selected for final evaluation on the test set.
 
 \subsection{Model Comparison}
-
-Table~\ref{tab:modelcomparison} summarises the cross-validated Macro F1-scores of the three candidate models.
 
 \begin{table}[H]
 \centering
@@ -190,9 +195,9 @@ Random Forest & 0.947 \\
 \label{tab:modelcomparison}
 \end{table}
 
-Random Forest substantially outperformed both Logistic Regression and KNN. This suggests that nonlinear relationships and feature interactions are important for predicting diagnosis. Logistic Regression achieved moderate performance, indicating that some linear structure is present in the data. In contrast, the lower performance of KNN suggests that local neighbourhood similarity alone is insufficient to capture the more complex patterns contained within the dataset.
-
-Based on these results, Random Forest was selected as the final candidate model for evaluation on the unseen test set.
+Table~\ref{tab:modelcomparison} summarises the cross-validated Macro F1-scores of the three candidate models. The performance gap between Random Forest (0.947) and the other two models is substantial, suggesting that the diagnostic patterns in this dataset are primarily driven by nonlinear interactions rather than linear separability or local similarity. Logistic Regression achieved moderate performance (0.774), confirming that some linear structure is present but insufficient on its own. The consistently weak performance of KNN (0.548) across all tested values of k further suggests that distance-based reasoning does not align well with the structure of this particular feature space.
+\bigbreak
+These results highlight an important consideration for clinical prediction tasks: when the relationship between predictors and outcomes is complex and involves interactions between multiple variables, ensemble methods such as Random Forest tend to outperform simpler models. Based on these findings, Random Forest was selected as the final candidate model.
 
 \section{Final Model Evaluation}
 
