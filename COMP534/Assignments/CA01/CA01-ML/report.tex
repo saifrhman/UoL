@@ -8,70 +8,41 @@
 \usepackage{tabularx}
 \usepackage{float}
 
+
 \geometry{margin=1in}
 
-\title{Predicting Diagnostic Outcomes Using Machine Learning}
-\author{Saif Ur Rehman, Laura Valentina Sierra Pena, Ainur Smailova}
-\date{\today}
-
+\title{CA01}
+\author{Ainur Smailova, Laura Valentina Sierra Peña, Saif Ur Rehman}
+\date{}
 \begin{document}
 
 \maketitle
 \section{Definitions}
 \subsection{Problem Modelling}
 
-The objective of this study is to predict patient diagnostic outcomes using demographic and clinical variables. The dataset contains measurements related to sleep quality, fatigue severity, stress levels, and behavioural indicators. The target variable diagnosis contains three categories: Depression, CI, and Both. Consequently, the task is formulated as a supervised multiclass classification problem.
-
-\bigskip
-
-The choice of classification over alternative modelling approaches is justified as follows. Regression is inappropriate because the target variable is categorical and does not possess a meaningful numerical scale or natural ordering between categories, predicting a continuous value would have no clinical interpretation in this context. Clustering is also unsuitable because the diagnostic labels are already known for all observations; unsupervised methods are intended for settings where class membership is unknown and must be inferred from the data alone. Since the goal is to assign each patient to one of three predefined diagnostic categories based on labelled training data, supervised classification is the appropriate modelling framework.
-
-\bigskip
-The dataset initially contained 670 observations and 19 variables. The aim is to determine whether the available demographic and clinical variables can accurately predict diagnostic outcomes.
+The task is a supervised multiclass classification problem predicting diagnosis (Depression, CI, or Both) from demographic and clinical features. Regression and clustering are unsuitable because the target variable is categorical and already labeled. The dataset contained 670 observations and 19 variables.
 
 \subsection{Data Analysis and Feature Selection}
 
-Initial exploration confirmed that the dataset contains no missing values and no duplicate observations. The dataset size is relatively small to moderate, making classical machine learning models more appropriate than deep learning approaches.
+Initial exploration confirmed no missing values and no duplicate observations. Variables were classified by statistical meaning as per Figure~\ref{fig:variables}. This guided encoding and scaling decisions. The id column was removed as a unique identifier, and country was removed as a constant feature. A value of 99 in \textit{depression\_phq9\_score} lies outside the valid PHQ-9 clinical range 0 - 27 and was removed, leaving 669 observations. Class distribution analysis revealed moderate imbalance, with the Both class containing fewer observations, motivating the use of stratified sampling.
 
-Variables were classified according to their statistical meaning rather than their storage data types. Nominal variables represent unordered categories, ordinal variables possess a natural ordering, binary variables represent two-category indicators, and numerical variables were further distinguished as discrete or continuous based on their observed distributions and measurement scales. This classification guided subsequent preprocessing decisions such as encoding strategies and feature scaling.
-
-Table~\ref{tab:variables} summarises the final variable classification used for preprocessing.
-
-\begin{table}[H]
+\begin{figure}[H]
 \centering
-\begin{tabularx}{\textwidth}{lX}
-\toprule
-Variable Type & Variables \\
-\midrule
-Nominal & diagnosis \\
-Ordinal & social\_activity\_level, exercise\_frequency, work\_status \\
-Binary & gender, meditation\_or\_mindfulness \\
-Discrete Numerical & depression\_phq9\_score, pem\_duration\_hours \\
-Continuous Numerical & age, stress\_level, sleep\_quality\_index, fatigue\_severity\_scale\_score \\
-Identifier & id (removed) \\
-Constant Feature & country (removed) \\
-\bottomrule
-\end{tabularx}
-\caption{Final variable classification used for preprocessing}
-\label{tab:variables}
-\end{table}
+\includegraphics[width=0.62\textwidth]{variables.jpeg}
+\caption{Preprocessing variables}
+\label{fig:variables}
+\end{figure}
 
-Inspection of the dataset revealed that the \textit{id} variable represents a unique patient identifier and therefore provides no predictive value. Additionally, the \textit{country} variable was constant across all observations and was removed from the dataset.
+Figure~\ref{fig:variables} summarises the final variable classification used for preprocessing.
 
-A statistical summary of the numerical variables revealed that \textit{depression\_phq9\_score} contained a value of 99, which lies outside the valid clinical range (0--27) of the PHQ-9 depression scale. This observation was treated as an invalid entry and removed, resulting in a dataset containing 669 observations.
-
-Several visualisation techniques were used to analyse the dataset. Histograms and violin plots were used to examine the distribution of numerical variables, while boxplots were used to identify potential outliers using the interquartile range criterion. Most variables exhibited smooth bounded distributions without evidence of extreme multimodality. Discrete variables such as \textit{depression\_phq9\_score} and \textit{pem\_duration\_hours} displayed step-like patterns consistent with integer-valued measurements.
-
-Although some values appeared outside whisker boundaries in the boxplots, inspection confirmed that these observations remained within clinically valid ranges and were therefore retained.
-
-Scatterplots were used to explore relationships between numerical variables and diagnosis classes. For example, fatigue severity tended to be higher for the \textit{CI} and \textit{Both} groups, whereas stress levels were distributed across all classes.
+Visualisations explored the dataset. Histograms and violin plots examined numerical distributions, boxplots flagged potential outliers, and scatterplots revealed relationships with diagnosis. Fatigue tended to be higher in the CI and Both groups, while stress was distributed across all classes. Observations outside boxplot whiskers were inspected and retained as they remained within clinically valid ranges.
 
 Class distribution analysis revealed moderate imbalance, with the \textit{Both} class containing fewer observations (Figure~\ref{fig:classdist}). This motivated the use of stratified sampling in the experimental protocol.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.62\textwidth]{countplot.png}
-\caption{Distribution of diagnosis classes}
+\caption{Diagnosis Class Distribution}
 \label{fig:classdist}
 \end{figure}
 
@@ -79,169 +50,116 @@ These exploratory analyses provided insight into the structure of the dataset an
 
 \subsection{Correlation and Redundancy Analysis}
 
-A Pearson correlation heatmap was used to analyse relationships among numerical variables (Figure~\ref{fig:pearsonheatmap}). A very strong correlation ($r = 0.97$) was observed between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}, indicating substantial redundancy between the two variables. Highly correlated predictors can introduce multicollinearity and provide limited additional information for many machine learning models.
-
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.78\textwidth]{pearson_heatmap.png}
-\caption{Pearson correlation heatmap of numerical variables before feature reduction}
+\caption{Correlation Heatmap}
 \label{fig:pearsonheatmap}
 \end{figure}
 
-To assess whether both variables contributed useful discriminatory information, point plots and one-way ANOVA tests were conducted across diagnosis groups. Neither variable showed statistically significant mean differences across classes. However, \textit{sleep\_quality\_index} exhibited slightly clearer group separation, and therefore \textit{deep\_sleep\_quality\_index} was removed. Aside from this pair, the remaining numerical variables showed only weak to moderate correlations.
+A Pearson correlation heatmap (Figure~\ref{fig:pearsonheatmap}) revealed a very strong correlation ($r = 0.97$) between sleep quality index and deep sleep quality index. Point plots and one-way ANOVA tests were used to assess differences across diagnosis groups; neither variable showed statistically significant differences. However, \textit{sleep\_quality\_index} displayed slightly clearer group separation in the point plots and was therefore retained, while \textit{deep\_sleep\_quality\_index} was removed. The remaining numerical variables showed only weak to moderate correlations.
+
 
 \subsection{Categorical Association Analysis}
+Cramer's V was computed to assess associations between categorical predictors and diagnosis. Most predictors showed weak associations $V < 0.10$. However, pem\_present showed a perfect association $V = 1.000$, indicating it deterministically separates the diagnosis categories and therefore represents target leakage. It was removed prior to model training. After removal, all remaining categorical predictors showed negligible inter-associations (Figure~\ref{fig:cramers}).
 
-To examine the relationship between categorical predictors and the target variable (\textit{diagnosis}), Cramér's V statistics were computed. Cramér's V is a measure of association between categorical variables derived from the chi-square statistic and ranges from 0 (no association) to 1 (perfect association). It is commonly used to evaluate the strength of relationships between categorical variables in classification problems.
-
-The computed Cramér's V values between each categorical predictor and the diagnosis variable are presented in Table~\ref{tab:cramersv}.
-
-\begin{table}[H]
+\begin{figure}[H]
 \centering
-\begin{tabular}{lc}
-\toprule
-Variable & Cramér's V \\
-\midrule
-gender & 0.013 \\
-work\_status & 0.082 \\
-social\_activity\_level & 0.103 \\
-exercise\_frequency & 0.084 \\
-meditation\_or\_mindfulness & 0.029 \\
-pem\_present & 1.000 \\
-\bottomrule
-\end{tabular}
-\caption{Cramér's V association between categorical predictors and the diagnosis variable}
-\label{tab:cramersv}
-\end{table}
+\includegraphics[width=0.62\textwidth]{cramers.jpeg}
+\caption{Categorical associations with diagnosis}
+\label{fig:cramers}
+\end{figure}
 
 The results indicate weak associations between most categorical predictors and the diagnosis variable. For example, \textit{gender} and \textit{meditation\_or\_mindfulness} show almost no relationship with diagnosis, while \textit{work\_status}, \textit{exercise\_frequency}, and \textit{social\_activity\_level} exhibit only weak associations.
-
-However, \textit{pem\_present} shows a perfect association with the diagnosis variable ($V = 1.000$). This indicates that the feature deterministically separates the diagnosis categories and therefore represents target leakage. Including such a variable would artificially inflate model performance. Consequently, \textit{pem\_present} was removed prior to model training.
 
 After removing this variable, Cramér's V values among the remaining categorical predictors were negligible ($V < 0.10$), indicating no strong associations between retained features.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.62\textwidth]{cramer_heatmap.png}
-\caption{Cramér's V heatmap between categorical predictors after removing \textit{pem\_present}}
+\caption{Categorical predictor associations (excluding \textit{pem\_present})}
 \label{fig:cramerheatmap}
 \end{figure}
 
-Overall, the feature screening process removed the identifier column, the constant feature, the invalid PHQ-9 observation, the highly redundant sleep-related variable, and the leakage-prone \textit{pem\_present} variable. The resulting feature set was considered suitable for modelling.
 
 \subsection{Experimental Protocol}
 
-To ensure reliable model evaluation, the dataset was divided into training and testing subsets using an 80/20 stratified train--test split. Stratification preserves class distribution across both subsets.
+The dataset was split 80/20 with stratification. Model selection and hyperparameter tuning used stratified 5-fold CV, with macro F1-score as the primary metric. Categorical variables were encoded (nominal: one-hot; ordinal: ordinal; binary: 0/1), and numerical features were standardised for models sensitive to feature scale (Logistic Regression, k-NN). Tree-based models used raw values. All encoding and scaling were applied within a preprocessing pipeline during cross-validation to prevent data leakage.
 
-Model selection and hyperparameter tuning were performed using stratified 5-fold cross-validation on the training set. Macro F1-score was selected as the primary evaluation metric because it provides balanced performance across all classes and is robust to moderate class imbalance.
+\subsection{Selected ML Methods}
 
-Machine learning models require numerical inputs; therefore, categorical variables were encoded prior to model training. Nominal variables such as \textit{gender} and \textit{work\_status} were encoded using one-hot encoding to avoid imposing artificial ordinal structure. Ordinal variables such as \textit{social\_activity\_level} and \textit{exercise\_frequency} were encoded using ordinal encoding that preserved their inherent ordering. Binary variables were mapped to 0/1 representation. Numerical variables were standardised for models that are sensitive to feature magnitude, such as Logistic Regression and k-Nearest Neighbours, while tree-based models were trained without scaling.
-
-To prevent data leakage, encoding and scaling were implemented within a preprocessing pipeline and applied during cross-validation rather than to the full dataset prior to splitting.
-
-\subsection{Selected Machine Learning Methods}
-
-Three machine learning algorithms discussed during the lectures were evaluated: Logistic Regression, k-Nearest Neighbours (KNN), and Random Forest.
-
-Logistic Regression provides a linear baseline classifier. KNN represents a distance-based learning approach relying on local neighbourhood similarity. Random Forest is an ensemble tree-based method capable of capturing nonlinear relationships and feature interactions. Comparing these models allows investigation of whether linear decision boundaries, local instance similarity, or nonlinear ensemble structures best explain the diagnostic outcomes.
+Three classifiers were evaluated: Logistic Regression (linear baseline), k-Nearest Neighbours (distance-based, non-parametric), and Random Forest (nonlinear ensemble). This selection allows comparison of linear, local-similarity, and ensemble-based approaches to understand which class of decision boundary best captures the diagnostic structure.
 
 \subsection{Hyperparameter Search}
 
-Hyperparameter tuning was performed using grid search within stratified 5-fold cross-validation. Stratification ensures that each fold preserves the class distribution of the target variable, which is important given the moderate class imbalance observed in the dataset. This approach provides a reliable estimate of model performance while preventing overfitting to a single validation split. Table~\ref{tab:hyperparameters} summarises the search spaces and best configurations obtained during model selection.
+Hyperparameter tuning was conducted using GridSearchCV with stratified 5-fold cross-validation, optimising the Macro F1-score. Stratification preserves class distribution across folds, which is important due to moderate class imbalance. The search space included 
+\textit{C}
+ for Logistic Regression, 
+\textit{k}
+ for k-Nearest Neighbours, and \textit{the number of trees} and \textit{maximum depth} for Random Forest. The best configuration for each model was selected based on the highest cross-validated Macro F1-score 
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.88\textwidth]{hyperparameter.jpeg}
+\caption{Hyperparameter tuning with 5-fold CV}
+\label{fig:hyperparameter}
+\end{figure}
 
 \section{Results}
 \subsection{Decisions Based on Data Analysis}
 
-Exploratory data analysis guided several preprocessing decisions. The identifier column \textit{id} was removed because it does not contain predictive information. The variable \textit{country} was removed as it was constant across all observations. An invalid value in \textit{depression\_phq9\_score} (99) was identified and removed based on the known clinical range of the PHQ-9 scale.
-
-Correlation analysis revealed a strong relationship between \textit{sleep\_quality\_index} and \textit{deep\_sleep\_quality\_index}, and the latter was removed to reduce redundancy. Cramér's V analysis identified \textit{pem\_present} as a leakage variable with perfect association with the target variable, and it was therefore removed to prevent artificially inflated model performance.
-
-
-\begin{table}[H]
-\centering
-\begin{tabularx}{\textwidth}{lXlc}
-\toprule
-Model & Hyperparameter Grid & Best Hyperparameters & CV Macro F1 \\
-\midrule
-Logistic Regression & $C \in \{0.1, 1, 10\}$ & $C=10$ & 0.774 \\
-k-Nearest Neighbours & $k \in \{3, 5, 7, 9, 11\}$ & $k=11$ & 0.548 \\
-Random Forest & $n\_estimators \in \{200, 500\}$, $max\_depth \in \{None, 10, 20\}$ & $n\_estimators=500$, $max\_depth=10$ & 0.947 \\
-\bottomrule
-\end{tabularx}
-\caption{Hyperparameter tuning results using grid search with stratified 5-fold cross-validation}
-\label{tab:hyperparameters}
-\end{table}
-
-The hyperparameter search results are summarised in Table~\ref{tab:hyperparameters}. Logistic Regression achieved a Macro F1-score of 0.774 with $C=10$, indicating that weaker regularisation improved performance. 
-
-The KNN model achieved a lower score of 0.548 with $k=11$, suggesting that local neighbourhood similarity alone was insufficient to separate the classes effectively. Additionally, the feature space in this dataset is heterogeneous, containing a mix of numerical and encoded categorical variables with different scales and distributions, which further distorts distance calculations. The relatively large optimal k = 11 also suggests that the decision boundaries are not well-captured by local neighbourhood structure alone.
-
-Random Forest achieved the highest cross-validated Macro F1-score of 0.947 with $n\_estimators=500$ and $max\_depth=10$. This indicates that nonlinear relationships and feature interactions play an important role in predicting diagnosis. Consequently, Random Forest was selected for final evaluation on the test set.
+Decisions based on the exploratory, correlation, and categorical association analyses presented in Sections~1.2--1.4 guided data preprocessing and feature selection.
+Logistic Regression achieved a Macro F1-score of 0.774 with $C = 10$, while KNN performed worse (Macro F1 = 0.548, $k = 11$). Random Forest achieved the best performance (Macro F1 = 0.947 with {\textit{n\_estimators} = 500 and \textit{max\_depth} = 10), indicating that nonlinear relationships and feature interactions play an important role in predicting diagnosis.
 
 \subsection{Model Comparison}
 
-\begin{table}[H]
+\begin{figure}[H]
 \centering
-\begin{tabular}{lc}
-\toprule
-Model & Cross-Validated Macro F1 Score \\
-\midrule
-Logistic Regression & 0.774 \\
-k-Nearest Neighbours & 0.548 \\
-Random Forest & 0.947 \\
-\bottomrule
-\end{tabular}
+\includegraphics[width=0.68\textwidth]{modelcomparision.jpeg}
 \caption{Cross-validated model comparison}
-\label{tab:modelcomparison}
-\end{table}
+\label{fig:modelcomparision}
+\end{figure}
 
-Table~\ref{tab:modelcomparison} summarises the cross-validated Macro F1-scores of the three candidate models. The performance gap between Random Forest (0.947) and the other two models is substantial, suggesting that the diagnostic patterns in this dataset are primarily driven by nonlinear interactions rather than linear separability or local similarity. Logistic Regression achieved moderate performance (0.774), confirming that some linear structure is present but insufficient on its own. The consistently weak performance of KNN (0.548) across all tested values of k further suggests that distance-based reasoning does not align well with the structure of this particular feature space.
-\bigbreak
-These results highlight an important consideration for clinical prediction tasks: when the relationship between predictors and outcomes is complex and involves interactions between multiple variables, ensemble methods such as Random Forest tend to outperform simpler models. Based on these findings, Random Forest was selected as the final candidate model.
 
-\textbf{ADD A BAR CHART COMPARTING MACRO F1}
+Logistic Regression achieved a Macro F1-score of 0.774 with $C=10$, indicating that weaker regularisation improved performance. 
+The KNN model achieved a lower score of 0.548 with $k=11$, suggesting that local neighbourhood similarity alone was insufficient to separate the classes effectively. (Figure~\ref{fig:hyperparameter}).
+
+Additionally, the feature space in this dataset is heterogeneous, containing a mix of numerical and encoded categorical variables with different scales and distributions, which further distorts distance calculations. The relatively large optimal k = 11 also suggests that the decision boundaries are not well-captured by local neighbourhood structure alone.
+
+Random Forest achieved the highest cross-validated Macro F1-score of 0.947 with $n\_estimators=500$ and $max\_depth=10$. This indicates that nonlinear relationships and feature interactions play an important role in predicting diagnosis.
+
+The large gap of Macro F1-scores confirms that nonlinear relationships and feature interactions drive diagnostic prediction. Logistic Regression's moderate score indicates some linear structure exists, while KNN's weak performance reflects the curse of dimensionality, in heterogeneous, high-dimensional feature spaces, distance-based reasoning becomes unreliable. Random Forest was selected as the final model.
 
 \section{Final Model Evaluation}
 
-The selected Random Forest model was evaluated on the held-out 20\% test set. The final model achieved strong predictive performance, with a test accuracy of approximately 0.963 and a Macro F1-score of approximately 0.954.
 
-Table~\ref{tab:testmetrics} summarises the final test metrics.
-
-\begin{table}[H]
-\centering
-\begin{tabular}{lc}
-\toprule
-Metric & Value \\
-\midrule
-Test Accuracy & 0.963 \\
-Test Macro F1 & 0.954 \\
-\bottomrule
-\end{tabular}
-\caption{Final performance of the selected Random Forest model on the test set}
-\label{tab:testmetrics}
-\end{table}
-
-Figure~\ref{fig:classreport} provides the full classification report. The \textit{CI} category achieved perfect precision, recall, and F1-score. The \textit{Depression} category also achieved strong performance. The \textit{Both} category exhibited slightly lower recall, indicating that a small number of instances were misclassified.
+The best-performing Random Forest model (\textit{n\_estimators} = 500, \textit{max\_depth = 10}) was evaluated on the held-out 20\%  test set, achieving a test accuracy of 0.963 and a Macro F1-score of 0.954. The CI class was predicted perfectly (F1 = 1.000), Depression achieved F1 = 0.955 with high recall (0.981), and the Both class showed slightly lower recall (0.857), with four observations misclassified as Depression, reflecting clinical overlap between these two categories. The close agreement between the cross-validated score (0.947) and the test score (0.954) indicates the model generalises well without substantial overfitting.
 
 \begin{figure}[H]
 \centering
+\includegraphics[width=0.30\textwidth]{testmetrics.jpeg}
+\caption{Random Forest test performance}
+\label{fig:testmetrics}
+\end{figure}
+
+Per-class results are summarised in the classification report and confusion matrix below
+\begin{figure}[H]
+\centering
 \includegraphics[width=0.88\textwidth]{classification_report.png}
-\caption{Classification report for the final Random Forest model}
+\caption{Classification report for RF}
 \label{fig:classreport}
 \end{figure}
 
 %TODO: Please add details for support, f1 score, recall and precision i.e., what do these metrics mean and how do they relate to our study and what value they add
 
-Figure~\ref{fig:confmat} shows the confusion matrix for the final Random Forest classifier. The matrix indicates that the \textit{CI} class was perfectly classified, while one \textit{Depression} observation and four \textit{Both} observations were misclassified. Most errors occur between the \textit{Both} and \textit{Depression} classes, suggesting some overlap in their clinical profiles.
+
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.58\textwidth]{confusion_matrix.png}
-\caption{Confusion matrix of the final Random Forest classifier}
+\caption{Confusion matrix for RF}
 \label{fig:confmat}
 \end{figure}
-
-The consistency between cross-validation performance and held-out test performance suggests that the model generalises well and does not exhibit substantial overfitting.
 
 \subsection*{Conclusion}
 
