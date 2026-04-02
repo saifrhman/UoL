@@ -1,0 +1,29 @@
+Preprocessing steps applied
+
+1. Header removal
+The dataset includes a header row ("ID<TAB>Sentence"), so it is skipped before feature extraction. This prevents the header text from being treated as a real data instance.
+
+2. Text field extraction
+Each row is split on the first tab character and only the sentence text is used for clustering. The numeric ID is metadata and does not describe semantic similarity between documents.
+
+3. Lowercasing and accent normalization
+The TF-IDF vectorizer converts text to lowercase and strips accented characters into a normalized Unicode form. This reduces duplicate features caused by case differences or alternate character forms.
+
+4. Stop-word removal
+Common English stop words are removed because they appear in many sentences and usually contribute little to topic separation. Removing them helps the model focus on more informative terms.
+
+5. TF-IDF weighting
+The text is transformed into TF-IDF features so that terms frequent in one sentence but rare across the corpus receive more weight. This is more useful for clustering text than raw counts because it reduces the influence of extremely common words.
+
+6. Unigrams and bigrams
+The representation includes both single words and two-word phrases. Bigrams can capture short contextual patterns that single words miss, which can improve separation between topics or writing styles.
+
+7. Rare and overly common term filtering
+Terms appearing in fewer than 2 documents are removed, and terms appearing in more than 95% of documents are also removed. This reduces noise from one-off tokens and uninformative near-universal words.
+
+8. L2 normalization with sublinear term frequency
+The resulting vectors are L2-normalized and use sublinear term-frequency scaling. This helps compare documents by direction rather than raw length and reduces the dominance of repeated words in very long sentences.
+
+Why these steps help clustering
+
+These preprocessing choices make the feature space less noisy and more semantically meaningful. For text clustering, good preprocessing is especially important because raw text creates very high-dimensional sparse data. By using TF-IDF, filtering, and normalization, the clustering algorithm can form groups based more on content similarity and less on sentence length, formatting, or very common words.
