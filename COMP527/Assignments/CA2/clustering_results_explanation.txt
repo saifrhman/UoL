@@ -1,17 +1,17 @@
 Clustering algorithm: KMeans on TF-IDF text features.
 Silhouette scoring metric: cosine similarity.
-Chosen K: 10
+Chosen K: 2
 
 Silhouette scores:
 K=1: undefined
-K=2: 0.006928
-K=3: 0.011109
-K=4: 0.012437
-K=5: 0.014933
-K=6: 0.018318
-K=7: 0.019464
-K=8: 0.020449
-K=9: 0.023302
-K=10: 0.025658
+K=2: 0.114069
+K=3: 0.108142
+K=4: 0.069910
+K=5: 0.079054
+K=6: 0.063340
+K=7: 0.065135
+K=8: 0.071928
+K=9: 0.071279
+K=10: 0.079785
 
-K=10 was selected because it achieved the highest silhouette score among the valid K values (2 to 10), indicating the best balance of compact clusters and separation between clusters.
+K=2 was selected because it achieved the highest silhouette score among the valid K values (2 to 10), indicating the best balance of compact clusters and separation between clusters.
