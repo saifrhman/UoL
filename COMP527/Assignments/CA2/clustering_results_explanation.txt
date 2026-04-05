@@ -1,17 +1,33 @@
-Clustering algorithm: KMeans on TF-IDF text features.
-Silhouette scoring metric: cosine similarity.
+Embedding method: OpenRouter embeddings.
+Embedding model: nvidia/llama-nemotron-embed-vl-1b-v2:free
+PCA components: 5
+Vector normalization: L2 normalization before clustering.
+Best clustering algorithm: Spectral Clustering
 Chosen K: 2
+Best silhouette score: 0.517536
 
-Silhouette scores:
+Agglomerative Clustering scores:
 K=1: undefined
-K=2: 0.114069
-K=3: 0.108142
-K=4: 0.069910
-K=5: 0.079054
-K=6: 0.063340
-K=7: 0.065135
-K=8: 0.071928
-K=9: 0.071279
-K=10: 0.079785
+K=2: 0.487799
+K=3: 0.373535
+K=4: 0.314651
+K=5: 0.219102
+K=6: 0.277140
+K=7: 0.353453
+K=8: 0.354890
+K=9: 0.305346
+K=10: 0.364266
 
-K=2 was selected because it achieved the highest silhouette score among the valid K values (2 to 10), indicating the best balance of compact clusters and separation between clusters.
+Spectral Clustering scores:
+K=1: undefined
+K=2: 0.517536
+K=3: 0.404310
+K=4: 0.353982
+K=5: 0.415784
+K=6: 0.388551
+K=7: 0.398872
+K=8: 0.357158
+K=9: 0.344653
+K=10: 0.359877
+
+The best result was achieved by Spectral Clustering at K=2 with silhouette 0.517536.

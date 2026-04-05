@@ -1,142 +1,142 @@
+# preprocessing.py
+"""
+Text preprocessing for clustering assignment.
+
+Usage:
+    python3 preprocessing.py data_train.txt
+
+This script:
+1. Loads raw texts from a file
+2. Cleans and normalizes the text
+3. Saves preprocessed texts to preprocessed_texts.txt
+"""
+
 from __future__ import annotations
 
-from pathlib import Path
-
-from sklearn.feature_extraction.text import TfidfVectorizer
-from nltk.stem import WordNetLemmatizer
-from nltk.tokenize import word_tokenize
-import nltk
-from nltk.corpus import stopwords
-
-stop_words = set(stopwords.words("english"))
-
-
-
-nltk.download("punkt")
-nltk.download("wordnet")
-
-lemmatizer = WordNetLemmatizer()
-
-def lemmatize_text(text: str):
-    tokens = word_tokenize(text.lower())
-    return [
-        lemmatizer.lemmatize(token)
-        for token in tokens
-        if token.isalpha() and token not in stop_words
-    ]
-
-def load_data(file_path: str) -> list[str]:
-    """Load tab-separated text data and preserve the original row order."""
-    sentences: list[str] = []
-
-    with Path(file_path).open("r", encoding="utf-8") as handle:
-        for line_number, raw_line in enumerate(handle):
-            line = raw_line.rstrip("\n")
-            if not line:
-                continue
-
-            parts = line.split("\t", 1)
-
-            # Skip the expected header row in the provided dataset format.
-            if line_number == 0 and len(parts) == 2 and parts[0].strip().lower() == "id":
-                continue
-
-            if len(parts) == 2:
-                sentences.append(parts[1].strip())
-            else:
-                sentences.append(parts[0].strip())
-
-    return sentences
-
-
-def build_vectorizer() -> TfidfVectorizer:
-    """Create a TF-IDF vectorizer suited to short and medium-length text."""
-    return TfidfVectorizer(
-        lowercase=True,
-        stop_words="english",
-        strip_accents="unicode",
-        ngram_range=(1, 2),
-        min_df=2,
-        max_df=0.95,
-        norm="l2",
-        sublinear_tf=True,
-        tokenizer=lemmatize_text,
-    )
-
-
-def preprocess(sentences: list[str]):
-    """Vectorize the input text into a sparse TF-IDF feature matrix."""
-    vectorizer = build_vectorizer()
-    return vectorizer.fit_transform(sentences)
-
-
-'''
-from __future__ import annotations
-
+import re
+import string
+import sys
 from pathlib import Path
 from typing import List
 
-import numpy as np
-from sentence_transformers import SentenceTransformer
+try:
+    import nltk
+    from nltk.corpus import stopwords
+    from nltk.stem import WordNetLemmatizer
+except ImportError:
+    print("Error: nltk is required. Install with: pip install nltk")
+    sys.exit(1)
 
 
-def load_data(file_path: str) -> List[str]:
+def ensure_nltk_resources() -> None:
+    """Download required NLTK resources if missing."""
+    resources = [
+        ("corpora/stopwords", "stopwords"),
+        ("corpora/wordnet", "wordnet"),
+        ("corpora/omw-1.4", "omw-1.4"),
+    ]
+
+    for resource_path, resource_name in resources:
+        try:
+            nltk.data.find(resource_path)
+        except LookupError:
+            nltk.download(resource_name, quiet=True)
+
+
+ensure_nltk_resources()
+
+STOP_WORDS = set(stopwords.words("english"))
+LEMMATIZER = WordNetLemmatizer()
+
+
+def clean_text(text: str) -> str:
     """
-    Load tab-separated text data and preserve the original row order.
-    Expected format:
-    id \t text
-    """
-    sentences: List[str] = []
-
-    with Path(file_path).open("r", encoding="utf-8") as handle:
-        for line_number, raw_line in enumerate(handle):
-            line = raw_line.rstrip("\n")
-
-            if not line:
-                continue
-
-            parts = line.split("\t", 1)
-
-            # Skip header row if present
-            if line_number == 0 and len(parts) == 2 and parts[0].strip().lower() == "id":
-                continue
-
-            if len(parts) == 2:
-                sentences.append(parts[1].strip())
-            else:
-                sentences.append(parts[0].strip())
-
-    return sentences
-
-
-def build_embedding_model() -> SentenceTransformer:
-    """
-    Load a lightweight Sentence-BERT model.
-    This model is fast and suitable for clustering tasks.
-    """
-    model_name = "all-MiniLM-L6-v2"
-    return SentenceTransformer(model_name)
-
-
-def preprocess(sentences: List[str]) -> np.ndarray:
-    """
-    Convert text into dense semantic embeddings using Sentence-BERT.
+    Clean a single text document.
 
     Steps:
-    - Encode sentences into embeddings
-    - Normalize embeddings (important for cosine similarity)
+    - lowercase
+    - remove HTML tags
+    - remove URLs
+    - remove emails
+    - remove non-ASCII characters
+    - remove punctuation
+    - remove numbers
+    - tokenize
+    - remove stopwords
+    - lemmatize
     """
-    if not sentences:
-        raise ValueError("No sentences provided for preprocessing.")
+    text = text.lower()
 
-    model = build_embedding_model()
+    # Remove HTML tags
+    text = re.sub(r"<.*?>", " ", text)
 
-    embeddings = model.encode(
-        sentences,
-        convert_to_numpy=True,
-        normalize_embeddings=True,  # VERY important for cosine similarity
-        show_progress_bar=False
-    )
+    # Remove URLs
+    text = re.sub(r"http\S+|www\S+|https\S+", " ", text)
 
-    return embeddings
-    '''
+    # Remove emails
+    text = re.sub(r"\S+@\S+", " ", text)
+
+    # Remove non-ASCII characters
+    text = text.encode("ascii", errors="ignore").decode()
+
+    # Replace punctuation with spaces
+    text = text.translate(str.maketrans(string.punctuation, " " * len(string.punctuation)))
+
+    # Remove digits
+    text = re.sub(r"\d+", " ", text)
+
+    # Remove extra whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+
+    tokens = text.split()
+
+    cleaned_tokens = []
+    for token in tokens:
+        if len(token) < 2:
+            continue
+        if token in STOP_WORDS:
+            continue
+        lemma = LEMMATIZER.lemmatize(token)
+        cleaned_tokens.append(lemma)
+
+    return " ".join(cleaned_tokens)
+
+
+def load_texts(file_path: str) -> List[str]:
+    """Load texts line-by-line from input file."""
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Input file not found: {file_path}")
+
+    with path.open("r", encoding="utf-8", errors="ignore") as f:
+        texts = [line.strip() for line in f if line.strip()]
+
+    return texts
+
+
+def save_texts(texts: List[str], output_path: str) -> None:
+    """Save preprocessed texts line-by-line."""
+    with open(output_path, "w", encoding="utf-8") as f:
+        for text in texts:
+            f.write(text + "\n")
+
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        print("Usage: python3 preprocessing.py data_train.txt")
+        sys.exit(1)
+
+    input_file = sys.argv[1]
+    output_file = "preprocessed_texts.txt"
+
+    texts = load_texts(input_file)
+    cleaned_texts = [clean_text(text) for text in texts]
+
+    save_texts(cleaned_texts, output_file)
+
+    print(f"Loaded {len(texts)} texts")
+    print(f"Saved preprocessed texts to {output_file}")
+
+
+if __name__ == "__main__":
+    main()

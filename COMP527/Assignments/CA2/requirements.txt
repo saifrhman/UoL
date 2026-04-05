@@ -1,8 +1,9 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
-matplotlib
+numpy
 scikit-learn
+matplotlib
+nltk
 sentence-transformers
 torch
-numpy
-nltk
+transformers
