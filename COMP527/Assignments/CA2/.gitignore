@@ -1,0 +1,59 @@
+# =========================
+# Python cache
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# =========================
+# Virtual environments
+# =========================
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+# Jupyter notebooks
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# System files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Model / embeddings cache
+# (SentenceTransformers / HuggingFace)
+# =========================
+cache/
+.huggingface/
+*.pt
+*.bin
+
+# =========================
+# Output files (optional)
+# Comment these if required for submission
+# =========================
+label.txt
+silhouette_plot.png
+preprocessed_texts.txt
+
+# =========================
+# VS Code / IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.swp
