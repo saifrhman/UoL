@@ -1,12 +1,9 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 numpy
+pandas
 scikit-learn
 matplotlib
-nltk
 sentence-transformers
 torch
-transformers
 umap-learn
-hdbscan
-pandas
