@@ -7,3 +7,6 @@ nltk
 sentence-transformers
 torch
 transformers
+umap-learn
+hdbscan
+pandas
