@@ -9,19 +9,27 @@ Cleans the sentences, produces sentence embeddings using:
     sentence-transformers/all-MiniLM-L12-v2
 
 Then applies:
-    1. L2 normalization
-    2. PCA for initial dimensionality reduction
-    3. UMAP for non-linear dimensionality reduction
+    1. L2 normalisation  – ensures all embedding vectors are unit vectors,
+                           so subsequent PCA decomposes directional (semantic)
+                           variance rather than magnitude variance.
+    2. PCA (50 components) – reduces dimensionality while retaining ~56 % of
+                           variance. The resulting components are kept as-is
+                           (not re-normalised): PCA deliberately assigns more
+                           variance to earlier components, and Euclidean
+                           distance in this space naturally weights the most
+                           informative components more heavily. Re-normalising
+                           after PCA would erase this useful structure and
+                           degrade cluster separation.
 
 Outputs
 -------
-embeddings.npy   – (N, 384) float32 numpy array
-sentences.pkl    – cleaned sentence list aligned with the embeddings
-features.npy     – final transformed feature matrix after normalization + PCA + UMAP
+embeddings.npy  – (N, 384) float32  raw sentence embeddings
+sentences.pkl   – cleaned sentence list aligned row-for-row with embeddings
+features.npy    – (N, 50)  float32  PCA-reduced feature matrix for clustering
 
 Usage
 -----
-python preprocessing.py data_train.txt
+    python preprocessing.py data_train.txt
 """
 
 from __future__ import annotations
@@ -38,82 +46,72 @@ from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize
 
-try:
-    import umap
-except ImportError:
-    print("Error: umap-learn is required. Install it with:")
-    print("pip install umap-learn")
-    sys.exit(1)
-
 # ── Config ────────────────────────────────────────────────────────────────────
-MODEL_NAME = "sentence-transformers/all-MiniLM-L12-v2"
+MODEL_NAME     = "sentence-transformers/all-MiniLM-L12-v2"
 EMBEDDINGS_OUT = "embeddings.npy"
-SENTENCES_OUT = "sentences.pkl"
-FEATURES_OUT = "features.npy"
+SENTENCES_OUT  = "sentences.pkl"
+FEATURES_OUT   = "features.npy"
 
-BATCH_SIZE = 64
-RANDOM_STATE = 42
+BATCH_SIZE     = 64
+RANDOM_STATE   = 42
 
+# 50 PCA components retain ~56 % of variance from the 384-dim MiniLM space.
+# Keeping dimensionality moderate avoids the curse of dimensionality, which
+# causes pairwise Euclidean distances to become increasingly uniform as
+# dimensionality grows — a known problem for distance-based clustering.
 PCA_COMPONENTS = 50
-UMAP_COMPONENTS = 16
-UMAP_NEIGHBORS = 30
-UMAP_MIN_DIST = 0.0
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 def load_data(path: str) -> pd.DataFrame:
     """Read the tab-separated file and return a DataFrame with ID + Sentence."""
-    df = pd.read_csv(path, sep="\t", encoding="utf-8")
+    df = pd.read_csv(
+        path,
+        sep="\t",
+        encoding="utf-8",
+        on_bad_lines="skip",   # skip malformed rows (e.g. embedded newlines)
+    )
     df.columns = df.columns.str.strip()
 
     required_cols = {"ID", "Sentence"}
     if not required_cols.issubset(set(df.columns)):
         raise ValueError(
-            f"Input file must contain columns {required_cols}, but got {set(df.columns)}"
+            f"Input file must contain columns {required_cols}, "
+            f"but got {set(df.columns)}"
         )
-
     print(f"[load] {len(df):,} rows loaded from '{path}'")
     return df
 
 
 def clean_text(text: str) -> str:
     """
-    Light-touch cleaning that preserves linguistic content:
-      - unescape literal \\n sequences
-      - remove escaped quotes
-      - collapse whitespace
-      - strip leading/trailing whitespace
+    Light-touch cleaning that preserves linguistic content.
 
-    Heavy normalization such as lowercasing, punctuation removal, or stopword
-    removal is intentionally skipped because MiniLM works better with natural
-    sentence text.
+    Steps applied:
+      - Unescape literal \\n sequences introduced during dataset creation
+      - Remove escaped quotation marks
+      - Collapse repeated whitespace / tabs into a single space
+      - Strip leading / trailing whitespace
+
+    Heavy normalisation (lowercasing, punctuation removal, stopword removal)
+    is intentionally omitted: MiniLM is a transformer model that benefits
+    from natural, cased, punctuated sentence text.
     """
     if not isinstance(text, str):
         return "empty"
-
-    # Unescape escaped newlines from the raw file
     text = text.replace("\\n", " ")
-
-    # Remove escaped quotes that appear in the dataset
     text = text.replace('\\"', '"').replace("\\'", "'")
-
-    # Collapse tabs/spaces/newlines
     text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"\n+", " ", text)
-
+    text = re.sub(r"\n+",    " ", text)
     text = text.strip()
-
-    # Preserve row count exactly
-    if len(text) == 0:
-        return "empty"
-
-    return text
+    return text if text else "empty"
 
 
 def preprocess(df: pd.DataFrame) -> List[str]:
     """
-    Apply cleaning while preserving row count and original order exactly.
-    This is important because label.txt must align with the original dataset.
+    Apply clean_text to every row while preserving exact row count and order.
+    Order preservation is critical: label.txt must align 1-to-1 with the
+    original dataset rows.
     """
     sentences = df["Sentence"].apply(clean_text).tolist()
     print(f"[clean] {len(sentences):,} sentences after cleaning")
@@ -121,107 +119,98 @@ def preprocess(df: pd.DataFrame) -> List[str]:
 
 
 def embed(sentences: List[str]) -> np.ndarray:
-    """Generate sentence embeddings in batches."""
+    """
+    Encode sentences with MiniLM and return raw (un-normalised) embeddings.
+
+    normalize_embeddings=False because normalisation is applied explicitly in
+    the next step, keeping pipeline stages distinct and transparent.
+    """
     print(f"[embed] Loading model '{MODEL_NAME}' ...")
     model = SentenceTransformer(MODEL_NAME)
-
-    print(
-        f"[embed] Encoding {len(sentences):,} sentences "
-        f"(batch_size={BATCH_SIZE}) ..."
-    )
-
+    print(f"[embed] Encoding {len(sentences):,} sentences "
+          f"(batch_size={BATCH_SIZE}) ...")
     embeddings = model.encode(
         sentences,
         batch_size=BATCH_SIZE,
         show_progress_bar=True,
-        normalize_embeddings=True,   # L2 normalization at embedding stage
+        normalize_embeddings=False,
         convert_to_numpy=True,
     )
-
     print(f"[embed] Embedding matrix shape: {embeddings.shape}")
     return embeddings.astype(np.float32)
 
 
-def normalize_features(X: np.ndarray) -> np.ndarray:
+def l2_normalise(X: np.ndarray) -> np.ndarray:
     """
-    Apply L2 normalization to the feature matrix.
-    This is useful for cosine-based similarity and clustering.
+    L2-normalise each row so that all embedding vectors are unit vectors.
+
+    Applied once — before PCA — so that PCA decomposes angular (semantic)
+    variance between sentences rather than differences in vector magnitude.
+    PCA output is deliberately left un-normalised: its variance weighting
+    (more variance in earlier components) is informative signal that helps
+    Euclidean-based AHC distinguish fine-grained semantic clusters.
     """
-    print("\n[norm] Applying L2 normalization ...")
+    print("\n[norm] Applying L2 normalisation ...")
     X_norm = normalize(X)
-    print(f"[norm] Feature matrix shape after normalization: {X_norm.shape}")
+    print(f"[norm] Shape after normalisation: {X_norm.shape}")
     return X_norm.astype(np.float32)
 
 
 def apply_pca(X: np.ndarray) -> np.ndarray:
     """
-    Apply PCA as an initial dimensionality reduction step to mitigate the
-    curse of dimensionality while preserving most of the variance.
+    Reduce dimensionality from 384 to PCA_COMPONENTS with PCA.
+
+    PCA is fit on the L2-normalised embeddings, ensuring it captures
+    directional (semantic) differences between sentences.  The output is
+    NOT re-normalised: the variance-weighted geometry of PCA space helps
+    Ward-linkage AHC weight informative dimensions more heavily, which
+    improves cluster separation compared to a uniform (re-normalised) space.
     """
-    print(f"\n[pca] Reducing dimensions to {PCA_COMPONENTS} ...")
-    reducer = PCA(n_components=PCA_COMPONENTS, random_state=RANDOM_STATE)
-    X_reduced = reducer.fit_transform(X)
+    print(f"\n[pca] Reducing dimensions from {X.shape[1]} to {PCA_COMPONENTS} ...")
+    reducer  = PCA(n_components=PCA_COMPONENTS, random_state=RANDOM_STATE)
+    X_pca    = reducer.fit_transform(X)
     explained = reducer.explained_variance_ratio_.sum()
-
-    print(f"[pca] {X.shape} -> {X_reduced.shape}")
-    print(f"[pca] Total explained variance retained: {explained:.4f}")
-    return X_reduced.astype(np.float32)
-
-
-def apply_umap(X: np.ndarray) -> np.ndarray:
-    """
-    Apply UMAP after PCA to capture non-linear structures and preserve local
-    neighbourhood relationships.
-    """
-    print(f"\n[umap] Reducing dimensions to {UMAP_COMPONENTS} ...")
-    reducer = umap.UMAP(
-        n_components=UMAP_COMPONENTS,
-        n_neighbors=UMAP_NEIGHBORS,
-        min_dist=UMAP_MIN_DIST,
-        metric="cosine",
-        random_state=RANDOM_STATE,
-    )
-    X_reduced = reducer.fit_transform(X)
-    print(f"[umap] {X.shape} -> {X_reduced.shape}")
-    return X_reduced.astype(np.float32)
+    print(f"[pca] {X.shape} -> {X_pca.shape}")
+    print(f"[pca] Cumulative explained variance retained: {explained:.4f}")
+    return X_pca.astype(np.float32)
 
 
 def preprocess_pipeline(data_path: str) -> Tuple[np.ndarray, List[str], np.ndarray]:
     """
     Full preprocessing pipeline:
-        load data -> clean text -> embed -> normalize -> PCA -> UMAP
+
+        load  →  clean  →  embed  →  L2 normalise  →  PCA
 
     Returns
     -------
-    features : np.ndarray
-        Final transformed feature matrix used for clustering.
+    X_pca : np.ndarray, shape (N, 50)
+        PCA-reduced feature matrix used for AHC clustering and silhouette
+        evaluation.  Variance-weighted: earlier components carry more
+        semantic signal and naturally receive more weight in Euclidean distance.
     sentences : List[str]
-        Cleaned sentences aligned with features.
-    embeddings : np.ndarray
-        Raw sentence embeddings before PCA/UMAP.
+        Cleaned sentences aligned row-for-row with X_pca.
+    embeddings : np.ndarray, shape (N, 384)
+        Raw MiniLM embeddings before any normalisation or reduction.
     """
-    df = load_data(data_path)
-    sentences = preprocess(df)
+    df         = load_data(data_path)
+    sentences  = preprocess(df)
     embeddings = embed(sentences)
-    X = normalize_features(embeddings)
-    X = apply_pca(X)
-    X = apply_umap(X)
-    return X, sentences, embeddings
+    X          = l2_normalise(embeddings)
+    X_pca      = apply_pca(X)
+    return X_pca, sentences, embeddings
 
 
 def save_artifacts(
     sentences: List[str],
     embeddings: np.ndarray,
-    features: np.ndarray
+    features: np.ndarray,
 ) -> None:
-    """Save embeddings, cleaned sentences, and final transformed features."""
+    """Persist embeddings, cleaned sentences, and PCA-reduced features."""
     np.save(EMBEDDINGS_OUT, embeddings)
     print(f"[save] Embeddings saved -> '{EMBEDDINGS_OUT}'")
-
     with open(SENTENCES_OUT, "wb") as f:
         pickle.dump(sentences, f)
     print(f"[save] Sentences saved  -> '{SENTENCES_OUT}'")
-
     np.save(FEATURES_OUT, features)
     print(f"[save] Features saved   -> '{FEATURES_OUT}'")
 
@@ -230,16 +219,12 @@ def main() -> None:
     if len(sys.argv) != 2:
         print("Usage: python preprocessing.py data_train.txt")
         sys.exit(1)
-
     data_path = sys.argv[1]
-
     if not Path(data_path).exists():
         print(f"Error: file not found -> {data_path}")
         sys.exit(1)
-
-    features, sentences, embeddings = preprocess_pipeline(data_path)
-    save_artifacts(sentences, embeddings, features)
-
+    X, sentences, embeddings = preprocess_pipeline(data_path)
+    save_artifacts(sentences, embeddings, X)
     print("\n✓ Preprocessing complete.")
 
 
