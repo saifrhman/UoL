@@ -4,17 +4,16 @@
 
 This project implements an end-to-end text clustering pipeline for grouping semantically similar sentences without predefined labels. The task focuses on unsupervised learning, where the goal is to discover natural structure in a sentence dataset rather than predict known classes.
 
-The approach combines transformer-based sentence embeddings with dimensionality reduction and multiple clustering algorithms. Sentences are encoded using MiniLM, transformed through normalization, PCA, and UMAP, and then clustered using several algorithms to identify the best-performing configuration based on silhouette score.
+Sentences are encoded using MiniLM, transformed through L2 normalisation and PCA, and then clustered using Agglomerative Hierarchical Clustering (AHC). The best number of clusters is selected automatically based on silhouette score.
 
 ## Features
 
 - Loads sentence data from a tab-separated text file
-- Cleans and standardizes raw sentence text while preserving row alignment
+- Cleans and standardises raw sentence text while preserving row alignment
 - Generates sentence embeddings using `sentence-transformers/all-MiniLM-L12-v2`
-- Applies L2 normalization, PCA, and UMAP for feature transformation
-- Evaluates multiple clustering algorithms on the same feature space
-- Compares clustering quality using silhouette score
-- Selects the best-performing clustering result automatically
+- Applies L2 normalisation and PCA (50 components) for feature transformation
+- Clusters with AHC (Euclidean distance, Ward linkage) for K = 2 to 10
+- Selects the best K automatically using silhouette score
 - Exports cluster labels, detailed results, and evaluation plots
 
 ## Dataset Format
@@ -35,39 +34,31 @@ ID	Sentence
 
 ## Methodology
 
-### 1. Preprocessing
+### 1. Preprocessing (`preprocessing.py`)
 
-The preprocessing stage:
+The preprocessing pipeline runs in the following stages:
 
 - Loads the dataset from a tab-separated file
 - Cleans sentence text by removing escaped newlines, escaped quotes, and redundant whitespace
 - Preserves sentence order to ensure output labels align with the original data
-- Converts each sentence into a dense semantic embedding using MiniLM
+- Encodes each sentence into a 384-dimensional dense embedding using MiniLM
+- Applies L2 normalisation so that PCA decomposes directional (semantic) variance rather than magnitude variance
+- Applies PCA to reduce dimensionality from 384 to 50 components, retaining approximately 56% of the variance
 
-### 2. Dimensionality Reduction
+The PCA output is intentionally left un-normalised. PCA assigns more variance to earlier components, and Euclidean distance in this space naturally weights the most informative components more heavily — erasing this structure by re-normalising would degrade cluster separation.
 
-The embedding space is reduced in two stages:
+### 2. Clustering (`clustering.py`)
 
-- **PCA** is applied first to reduce dimensionality while retaining most of the variance and improving efficiency
-- **UMAP** is then used to capture non-linear structure and preserve local neighbourhood relationships that are useful for clustering
+Clustering is performed using **Agglomerative Hierarchical Clustering (AHC)** with:
 
-This PCA-plus-UMAP combination helps produce a compact feature representation that is more suitable for downstream clustering than raw high-dimensional embeddings alone.
+- `metric = euclidean` — consistent with the variance-weighted PCA feature space, giving more weight to higher-variance (more informative) components automatically
+- `linkage = ward` — merges clusters to minimise the increase in total within-cluster variance, producing compact and balanced clusters; defined only for Euclidean space
 
-### 3. Clustering Algorithms
+AHC is evaluated for K = 2 to 10. K = 1 is skipped because silhouette score is undefined for a single cluster. The K with the highest silhouette score is selected as the final result.
 
-The pipeline evaluates the following clustering methods:
+### 3. Evaluation
 
-- KMeans with random initialization
-- KMeans++
-- Agglomerative Hierarchical Clustering (AHC)
-- HDBSCAN
-- KMedoids
-
-For fixed-`K` algorithms, clustering is evaluated for `K = 1` to `10`. HDBSCAN is evaluated separately because it determines the number of clusters automatically.
-
-### 4. Evaluation
-
-Clustering quality is measured using the **silhouette score**, which estimates how well samples fit within their assigned clusters compared with other clusters. The pipeline records scores across candidate configurations and selects the best-performing result automatically.
+Clustering quality is measured using the **silhouette score**, computed with Euclidean distance in the same PCA feature space used for clustering. This ensures a fully consistent and honest quality measure. Silhouette scores in text clustering with BERT-family embeddings are typically in the range 0.05–0.20, so values in this range should be interpreted as realistic rather than poor.
 
 ## Installation
 
@@ -86,24 +77,17 @@ pip install -r requirements.txt
 Run the full clustering pipeline with:
 
 ```bash
-python clustering.py data.txt
+python clustering.py data_train.txt
 ```
 
-Replace `data.txt` with your input dataset file.
+## Outputs
 
-Main outputs:
-
-- `label.txt` - final cluster assignment for each input sentence, one label per line
-- `silhouette_plot.png` - line plot comparing silhouette scores across clustering methods and `K` values
-- `clustering_results.csv` - detailed output containing each sentence, its assigned cluster, and the selected algorithm
-
-Additional output:
-
-- `silhouette_scores.csv` - tabular silhouette scores recorded during evaluation
-
-## Results
-
-The quality of clustering is assessed using silhouette score. Higher silhouette values indicate more coherent and better-separated clusters. The final selected model is the one that achieves the highest valid silhouette score among the evaluated algorithms and parameter settings.
+| File | Description |
+|---|---|
+| `label.txt` | Final cluster assignment (1-indexed) for each input sentence, one label per line |
+| `clustering_results.csv` | Each sentence with its assigned cluster and algorithm name |
+| `silhouette_scores.csv` | Silhouette coefficient recorded for each K = 1 to 10 |
+| `silhouette_plot.png` | Line chart of silhouette coefficient vs K |
 
 ## Project Structure
 
@@ -118,7 +102,7 @@ CA2/
 
 ## Requirements
 
-Core libraries used in this project include:
+Libraries used in this project:
 
 - `numpy`
 - `pandas`
@@ -126,12 +110,6 @@ Core libraries used in this project include:
 - `matplotlib`
 - `sentence-transformers`
 - `torch`
-- `transformers`
-- `umap-learn`
-- `hdbscan`
-- `nltk`
-
-Note: `KMedoids` requires `scikit-learn-extra` if that algorithm is to be enabled.
 
 ## Notes
 
