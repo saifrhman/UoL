@@ -199,11 +199,17 @@ def print_cluster_samples(sentences: List[str], labels: np.ndarray, n: int = 5) 
 
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        print("Usage: python clustering.py data.txt")
+    # Accept either no argument (defaults to data_train.txt) or exactly one
+    # filename argument.  More than one argument is a usage error.
+    if len(sys.argv) == 1:
+        data_path = "data_train.txt"
+        print(f"No data file specified — using default: {data_path}")
+    elif len(sys.argv) == 2:
+        data_path = sys.argv[1]
+    else:
+        print("Usage: python clustering.py [data.txt]")
         sys.exit(1)
 
-    data_path = sys.argv[1]
     if not Path(data_path).exists():
         print(f"Error: file not found -> {data_path}")
         sys.exit(1)
