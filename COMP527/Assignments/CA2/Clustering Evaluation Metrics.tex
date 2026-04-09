@@ -1,0 +1,452 @@
+\documentclass[11pt, a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{mdframed}
+\usepackage{xurl}
+
+% ── Colours ───────────────────────────────────────────────────────────────────
+\definecolor{darkblue}{HTML}{1a1a2e}
+\definecolor{midblue}{HTML}{2e2e5e}
+\definecolor{lightbg}{HTML}{f0f0fa}
+\definecolor{framebg}{HTML}{eef0ff}
+\definecolor{framebd}{HTML}{aaaacc}
+\definecolor{mathbg}{HTML}{f5f5ff}
+
+% ── Hyperref ──────────────────────────────────────────────────────────────────
+\hypersetup{
+    colorlinks=true,
+    linkcolor=midblue,
+    urlcolor=midblue,
+    pdftitle={Clustering Evaluation Metrics --- Complete Worked Solutions},
+}
+
+% ── Section formatting ────────────────────────────────────────────────────────
+\titleformat{\section}
+  {\large\bfseries\color{darkblue}}
+  {\thesection.}{0.6em}{}
+  [\vspace{-0.3em}\textcolor{framebd}{\rule{\linewidth}{0.4pt}}]
+
+\titleformat{\subsection}
+  {\normalsize\bfseries\color{midblue}}
+  {\thesubsection}{0.6em}{}
+
+\titlespacing{\section}{0pt}{18pt}{6pt}
+\titlespacing{\subsection}{0pt}{10pt}{4pt}
+
+% ── Header / Footer ───────────────────────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\textcolor{darkblue}{\textbf{Clustering Evaluation Metrics}}}
+\fancyhead[R]{\small\textcolor{darkblue}{201940185}}
+\fancyfoot[C]{\small\thepage}
+
+% ── Shaded boxes ─────────────────────────────────────────────────────────────
+\newmdenv[
+  backgroundcolor=mathbg,
+  linecolor=framebd,
+  linewidth=0.6pt,
+  innerleftmargin=12pt,
+  innerrightmargin=12pt,
+  innertopmargin=8pt,
+  innerbottommargin=8pt,
+  skipabove=6pt,
+  skipbelow=6pt,
+]{mathbox}
+
+\newmdenv[
+  backgroundcolor=framebg,
+  linecolor=framebd,
+  linewidth=0.6pt,
+  innerleftmargin=12pt,
+  innerrightmargin=12pt,
+  innertopmargin=8pt,
+  innerbottommargin=8pt,
+  skipabove=6pt,
+  skipbelow=6pt,
+]{insightbox}
+
+% ── List style ────────────────────────────────────────────────────────────────
+\setlist[itemize]{leftmargin=1.4em, itemsep=3pt, topsep=4pt}
+
+% =============================================================================
+\begin{document}
+% =============================================================================
+
+% ── Title block ───────────────────────────────────────────────────────────────
+\begin{center}
+  {\LARGE\bfseries\color{darkblue} Clustering Evaluation Metrics}\\[4pt]
+  {\normalsize CA Assignment $\cdot$ Questions 2 \& 3}\\[2pt]
+  {\normalsize Complete Worked Solutions --- Confusion Matrix, Macro-Averaged \& B-CUBED}
+\end{center}
+
+\vspace{4pt}
+\textcolor{framebd}{\rule{\linewidth}{0.8pt}}
+\vspace{6pt}
+
+% =============================================================================
+\section{Setup: Reading Figure 1}
+% =============================================================================
+
+We assign each cluster a majority-class label by inspecting Figure~1:
+
+\begin{itemize}
+  \item \textbf{Cluster 1} (leftmost circle): 4 Red, 3 Blue, 3 Purple
+        $\Rightarrow$ labelled \textbf{Red}. Total $= 10$.
+  \item \textbf{Cluster 2} (middle circle): 2 Red, 5 Blue, 2 Purple
+        $\Rightarrow$ labelled \textbf{Blue}. Total $= 9$.
+  \item \textbf{Cluster 3} (rightmost circle): 2 Red, 2 Blue, 4 Purple
+        $\Rightarrow$ labelled \textbf{Purple}. Total $= 8$.
+\end{itemize}
+
+True class totals: Red $= 8$,\; Blue $= 10$,\; Purple $= 9$.\quad
+Grand total $N = 27$.
+
+% =============================================================================
+\section{Question 2 (20\,pts): Confusion Matrix \& Macro-Averaged Metrics}
+% =============================================================================
+
+\subsection{Confusion Matrix}
+
+Rows are \emph{true} class labels; columns are \emph{predicted} cluster labels
+(i.e.\ the cluster a point was assigned to).
+
+\[
+\begin{array}{l|ccc|c}
+\text{True} \;\backslash\; \text{Predicted}
+  & \text{Red} & \text{Blue} & \text{Purple} & \text{Row total} \\
+\midrule
+\text{Red}       & 4 & 2 & 2 & 8  \\
+\text{Blue}      & 3 & 5 & 2 & 10 \\
+\text{Purple}    & 3 & 2 & 4 & 9  \\
+\midrule
+\text{Col total} & 10 & 9 & 8 & 27 \\
+\end{array}
+\]
+
+\subsection{Per-Cluster Precision}
+
+Precision measures how \emph{pure} a cluster is --- what fraction of its items
+belong to the majority (assigned) class:
+
+\[
+  P(\text{cluster}_k)
+  = \frac{\text{count of majority class in cluster}_k}{|\text{cluster}_k|}
+\]
+
+\begin{align*}
+  P(\text{Red cluster})    &= \frac{4}{10} = 0.4000 \\[4pt]
+  P(\text{Blue cluster})   &= \frac{5}{9}  \approx 0.5556 \\[4pt]
+  P(\text{Purple cluster}) &= \frac{4}{8}  = \frac{1}{2} = 0.5000
+\end{align*}
+
+\textbf{Macro-Averaged Precision} (arithmetic mean over the three clusters):
+
+\begin{align*}
+  \overline{P}
+  &= \frac{1}{3}\!\left(\frac{4}{10} + \frac{5}{9} + \frac{4}{8}\right) \\[6pt]
+  &= \frac{1}{3}\!\left(\frac{36}{90} + \frac{50}{90} + \frac{45}{90}\right) \\[6pt]
+  &= \frac{1}{3} \cdot \frac{131}{90}
+   = \frac{131}{270}
+\end{align*}
+
+\begin{mathbox}
+\[
+  \overline{P} = \frac{131}{270} \approx 0.4852
+\]
+\end{mathbox}
+
+\subsection{Per-Class Recall}
+
+Recall measures how many items of a true class were captured by the cluster
+assigned to that class:
+
+\[
+  R(\text{class}_c)
+  = \frac{\text{count of class}_c \text{ in its assigned cluster}}
+         {\text{total items of class}_c}
+\]
+
+\begin{align*}
+  R(\text{Red})    &= \frac{4}{8}  = \frac{1}{2} = 0.5000 \\[4pt]
+  R(\text{Blue})   &= \frac{5}{10} = \frac{1}{2} = 0.5000 \\[4pt]
+  R(\text{Purple}) &= \frac{4}{9}  \approx 0.4444
+\end{align*}
+
+\textbf{Macro-Averaged Recall:}
+
+\begin{align*}
+  \overline{R}
+  &= \frac{1}{3}\!\left(\frac{1}{2} + \frac{1}{2} + \frac{4}{9}\right) \\[6pt]
+  &= \frac{1}{3}\!\left(\frac{9}{18} + \frac{9}{18} + \frac{8}{18}\right) \\[6pt]
+  &= \frac{1}{3} \cdot \frac{26}{18}
+   = \frac{26}{54}
+   = \frac{13}{27}
+\end{align*}
+
+\begin{mathbox}
+\[
+  \overline{R} = \frac{13}{27} \approx 0.4815
+\]
+\end{mathbox}
+
+\subsection{Macro-Averaged F-score}
+
+\[
+  \overline{F} = \frac{2\,\overline{P}\,\overline{R}}{\overline{P} + \overline{R}}
+\]
+
+\textbf{Step 1 --- Denominator:}
+\[
+  \overline{P} + \overline{R}
+  = \frac{131}{270} + \frac{13}{27}
+  = \frac{131}{270} + \frac{130}{270}
+  = \frac{261}{270}
+  = \frac{29}{30}
+\]
+
+\textbf{Step 2 --- Numerator:}
+\[
+  2\,\overline{P}\,\overline{R}
+  = 2 \times \frac{131}{270} \times \frac{13}{27}
+  = \frac{2 \times 131 \times 13}{270 \times 27}
+  = \frac{3406}{7290}
+\]
+
+\textbf{Step 3 --- Divide:}
+\begin{align*}
+  \overline{F}
+  &= \frac{3406/7290}{261/270}
+   = \frac{3406}{7290} \times \frac{270}{261}
+   = \frac{3406 \times 270}{7290 \times 261}
+   = \frac{3406}{27 \times 261}
+   = \frac{3406}{7047}
+\end{align*}
+
+\begin{mathbox}
+\[
+  \overline{F} = \frac{3406}{7047} \approx 0.4833
+\]
+\end{mathbox}
+
+\begin{insightbox}
+\textbf{Question 2 Summary}
+\[
+  \overline{P} = \frac{131}{270} \approx 0.4852, \qquad
+  \overline{R} = \frac{13}{27}   \approx 0.4815, \qquad
+  \overline{F} = \frac{3406}{7047} \approx 0.4833
+\]
+\end{insightbox}
+
+% =============================================================================
+\section{Question 3 (10\,pts): B-CUBED Precision, Recall, and F-score}
+% =============================================================================
+
+\subsection{B-CUBED Definitions}
+
+For each item $e$, let $L(e)$ be its \emph{true class} and $K(e)$ be the
+\emph{cluster} it is assigned to. The per-item scores are:
+
+\begin{align*}
+  P_{\mathrm{BC}}(e)
+  &= \frac{|\{e' \in K(e) : L(e') = L(e)\}|}{|K(e)|}
+  &&\text{(cluster purity for } e\text{)} \\[8pt]
+  R_{\mathrm{BC}}(e)
+  &= \frac{|\{e' \in K(e) : L(e') = L(e)\}|}{|\{e'' : L(e'') = L(e)\}|}
+  &&\text{(class coverage for } e\text{)}
+\end{align*}
+
+The overall B-CUBED scores are the \emph{averages} over all $N = 27$ items:
+\[
+  P_{\mathrm{BC}} = \frac{1}{N}\sum_{e} P_{\mathrm{BC}}(e), \qquad
+  R_{\mathrm{BC}} = \frac{1}{N}\sum_{e} R_{\mathrm{BC}}(e)
+\]
+
+\subsection{Per-Item B-CUBED Precision}
+
+Items sharing the same cluster \emph{and} class have the same precision value,
+so we compute once per $(class,\,cluster)$ cell and multiply by the cell count.
+
+\[
+\begin{array}{l|l|c|c|c}
+\text{Class} & \text{Cluster (label)} & n_{ij} & |K| & P_{\mathrm{BC}}(e) \\
+\midrule
+\text{Red}    & \text{Red (C1)}    & 4 & 10 & 4/10 \\
+\text{Blue}   & \text{Red (C1)}    & 3 & 10 & 3/10 \\
+\text{Purple} & \text{Red (C1)}    & 3 & 10 & 3/10 \\
+\text{Red}    & \text{Blue (C2)}   & 2 &  9 & 2/9  \\
+\text{Blue}   & \text{Blue (C2)}   & 5 &  9 & 5/9  \\
+\text{Purple} & \text{Blue (C2)}   & 2 &  9 & 2/9  \\
+\text{Red}    & \text{Purple (C3)} & 2 &  8 & 2/8  \\
+\text{Blue}   & \text{Purple (C3)} & 2 &  8 & 2/8  \\
+\text{Purple} & \text{Purple (C3)} & 4 &  8 & 4/8  \\
+\end{array}
+\]
+
+\textbf{Weighted sum of individual precisions:}
+\begin{align*}
+  \textstyle\sum P
+  &= 4{\cdot}\tfrac{4}{10}
+   + 3{\cdot}\tfrac{3}{10}
+   + 3{\cdot}\tfrac{3}{10}
+   + 2{\cdot}\tfrac{2}{9}
+   + 5{\cdot}\tfrac{5}{9}
+   + 2{\cdot}\tfrac{2}{9}
+   + 2{\cdot}\tfrac{2}{8}
+   + 2{\cdot}\tfrac{2}{8}
+   + 4{\cdot}\tfrac{4}{8} \\[4pt]
+  &= \frac{16+9+9}{10} + \frac{4+25+4}{9} + \frac{4+4+16}{8} \\[4pt]
+  &= \frac{34}{10} + \frac{33}{9} + \frac{24}{8} \\[4pt]
+  &= \frac{306}{90} + \frac{330}{90} + \frac{270}{90}
+   = \frac{906}{90}
+   = \frac{151}{15}
+\end{align*}
+
+\begin{mathbox}
+\[
+  P_{\mathrm{BC}}
+  = \frac{\,151/15\,}{27}
+  = \frac{151}{405}
+  \approx 0.3728
+\]
+\end{mathbox}
+
+\subsection{Per-Item B-CUBED Recall}
+
+\[
+\begin{array}{l|l|c|c|c}
+\text{Class} & \text{Cluster (label)} & n_{ij} & |C| & R_{\mathrm{BC}}(e) \\
+\midrule
+\text{Red}    & \text{Red (C1)}    & 4 &  8 & 4/8  \\
+\text{Blue}   & \text{Red (C1)}    & 3 & 10 & 3/10 \\
+\text{Purple} & \text{Red (C1)}    & 3 &  9 & 3/9  \\
+\text{Red}    & \text{Blue (C2)}   & 2 &  8 & 2/8  \\
+\text{Blue}   & \text{Blue (C2)}   & 5 & 10 & 5/10 \\
+\text{Purple} & \text{Blue (C2)}   & 2 &  9 & 2/9  \\
+\text{Red}    & \text{Purple (C3)} & 2 &  8 & 2/8  \\
+\text{Blue}   & \text{Purple (C3)} & 2 & 10 & 2/10 \\
+\text{Purple} & \text{Purple (C3)} & 4 &  9 & 4/9  \\
+\end{array}
+\]
+
+\textbf{Weighted sum of individual recalls:}
+\begin{align*}
+  \textstyle\sum R
+  &= 4{\cdot}\tfrac{4}{8}
+   + 3{\cdot}\tfrac{3}{10}
+   + 3{\cdot}\tfrac{3}{9}
+   + 2{\cdot}\tfrac{2}{8}
+   + 5{\cdot}\tfrac{5}{10}
+   + 2{\cdot}\tfrac{2}{9}
+   + 2{\cdot}\tfrac{2}{8}
+   + 2{\cdot}\tfrac{2}{10}
+   + 4{\cdot}\tfrac{4}{9} \\[4pt]
+  &= \frac{16+4+4}{8} + \frac{9+25+4}{10} + \frac{9+4+16}{9} \\[4pt]
+  &= \frac{24}{8} + \frac{38}{10} + \frac{29}{9}
+\end{align*}
+
+Convert to a common denominator of $\mathrm{lcm}(8,10,9) = 360$:
+\begin{align*}
+  &= \frac{24 \times 45}{360} + \frac{38 \times 36}{360} + \frac{29 \times 40}{360} \\[4pt]
+  &= \frac{1080 + 1368 + 1160}{360}
+   = \frac{3608}{360}
+   = \frac{451}{45}
+\end{align*}
+
+\begin{mathbox}
+\[
+  R_{\mathrm{BC}}
+  = \frac{\,451/45\,}{27}
+  = \frac{451}{1215}
+  \approx 0.3712
+\]
+\end{mathbox}
+
+\subsection{B-CUBED F-score}
+
+\[
+  F_{\mathrm{BC}}
+  = \frac{2\,P_{\mathrm{BC}}\,R_{\mathrm{BC}}}{P_{\mathrm{BC}} + R_{\mathrm{BC}}}
+\]
+
+\textbf{Step 1 --- Denominator:}
+\[
+  P_{\mathrm{BC}} + R_{\mathrm{BC}}
+  = \frac{151}{405} + \frac{451}{1215}
+  = \frac{453}{1215} + \frac{451}{1215}
+  = \frac{904}{1215}
+\]
+
+\textbf{Step 2 --- Numerator:}
+\[
+  2\,P_{\mathrm{BC}}\,R_{\mathrm{BC}}
+  = 2 \times \frac{151}{405} \times \frac{451}{1215}
+  = \frac{2 \times 151 \times 451}{405 \times 1215}
+  = \frac{136\,202}{492\,075}
+\]
+
+\textbf{Step 3 --- Divide:}
+\begin{align*}
+  F_{\mathrm{BC}}
+  &= \frac{136\,202\,/\,492\,075}{904\,/\,1215}
+   = \frac{136\,202}{492\,075} \times \frac{1215}{904}
+   = \frac{136\,202}{405 \times 904}
+   = \frac{136\,202}{366\,120}
+   = \frac{68\,101}{183\,060}
+\end{align*}
+
+\begin{mathbox}
+\[
+  F_{\mathrm{BC}} = \frac{68\,101}{183\,060} \approx 0.3720
+\]
+\end{mathbox}
+
+\begin{insightbox}
+\textbf{Question 3 Summary}
+\[
+  P_{\mathrm{BC}} = \frac{151}{405} \approx 0.3728, \qquad
+  R_{\mathrm{BC}} = \frac{451}{1215} \approx 0.3712, \qquad
+  F_{\mathrm{BC}} = \frac{68\,101}{183\,060} \approx 0.3720
+\]
+\end{insightbox}
+
+% =============================================================================
+\section{Combined Summary}
+% =============================================================================
+
+\begin{insightbox}
+\[
+\renewcommand{\arraystretch}{2.2}
+\begin{array}{l|ccc}
+ & \text{Precision} & \text{Recall} & \text{F-score} \\
+\midrule
+\text{Q2: Macro-Averaged}
+  & \dfrac{131}{270} \approx 0.4852
+  & \dfrac{13}{27}   \approx 0.4815
+  & \dfrac{3406}{7047} \approx 0.4833 \\
+\text{Q3: B-CUBED}
+  & \dfrac{151}{405} \approx 0.3728
+  & \dfrac{451}{1215} \approx 0.3712
+  & \dfrac{68101}{183060} \approx 0.3720 \\
+\end{array}
+\]
+\end{insightbox}
+
+\end{document}
