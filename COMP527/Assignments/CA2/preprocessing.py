@@ -38,8 +38,7 @@ import re
 import sys
 import pickle
 from pathlib import Path
-from typing import List, Optional, Tuple
-
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -66,65 +65,29 @@ PCA_COMPONENTS = 50
 
 def load_data(path: str) -> pd.DataFrame:
     """
-    Read the tab-separated file robustly, handling sentences that contain
-    embedded newline characters.
-
-    pandas' read_csv with on_bad_lines='skip' silently drops any row whose
-    Sentence field contains a literal newline, because the newline is
-    interpreted as a row terminator, splitting one logical row into two
-    physical lines.  The second fragment has no ID prefix so pandas discards
-    it.
-
-    Fix: read the file raw, detect row boundaries by checking whether the
-    first field is a digit (the ID), and join continuation lines back onto
-    the current sentence as a space.  This recovers all 1,760 rows.
+    Read the tab-separated file, re-joining lines that were split by
+    embedded newline characters in the Sentence field, so that all 1,760
+    instances receive a label.
     """
-    with open(path, encoding="utf-8") as f:
-        raw_lines = f.read().splitlines()
+    with open(path, encoding="utf-8", errors="replace") as f:
+        raw = f.read()
 
-    # Validate header
-    if not raw_lines:
-        raise ValueError(f"File is empty: {path}")
-    
-    header_parts = raw_lines[0].split("\t")
-    if len(header_parts) < 2 or header_parts[0].strip() != "ID":
+    # Sentences with embedded \n were serialised as literal \\n — unescape
+    # them to a space so the row stays on one physical line for parsing.
+    raw = raw.replace("\\n", " ")
+
+    import io
+    df = pd.read_csv(io.StringIO(raw), sep="\t", encoding="utf-8")
+    df.columns = df.columns.str.strip()
+
+    required_cols = {"ID", "Sentence"}
+    if not required_cols.issubset(set(df.columns)):
         raise ValueError(
-            f"Expected header 'ID<TAB>Sentence', got: {raw_lines[0]!r}"
+            f"Input file must contain columns {required_cols}, "
+            f"but got {set(df.columns)}"
         )
-
-    rows = []
-    current_id: Optional[int] = None
-    current_sentence_parts: List[str] = []
-
-    for line in raw_lines[1:]:
-        parts = line.split("\t", 1)  # split on first tab only
-        # A new row starts when the first field is a non-empty integer
-        if len(parts) == 2 and parts[0].strip().lstrip("-").isdigit():
-            # Flush the previous accumulated row
-            if current_id is not None:
-                rows.append({
-                    "ID":       current_id,
-                    "Sentence": " ".join(current_sentence_parts),
-                })
-            current_id = int(parts[0].strip())
-            current_sentence_parts = [parts[1]]
-        else:
-            # Continuation line — part of the previous sentence's embedded newline
-            if current_id is not None:
-                current_sentence_parts.append(line)
-            # Lines before the first valid row (e.g. blank lines) are silently ignored
-
-    # Flush the final row
-    if current_id is not None:
-        rows.append({
-            "ID":       current_id,
-            "Sentence": " ".join(current_sentence_parts),
-        })
-
-    df = pd.DataFrame(rows)
     print(f"[load] {len(df):,} rows loaded from '{path}'")
     return df
-
 
 def clean_text(text: str) -> str:
     """
