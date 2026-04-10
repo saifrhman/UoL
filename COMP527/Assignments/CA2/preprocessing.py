@@ -12,7 +12,7 @@ Then applies:
     1. L2 normalisation  – ensures all embedding vectors are unit vectors,
                            so subsequent PCA decomposes directional (semantic)
                            variance rather than magnitude variance.
-    2. PCA (50 components) – reduces dimensionality while retaining ~56 % of
+    2. PCA (100 components) – reduces dimensionality while retaining ~74.6 % of
                            variance. The resulting components are kept as-is
                            (not re-normalised): PCA deliberately assigns more
                            variance to earlier components, and Euclidean
@@ -25,7 +25,7 @@ Outputs
 -------
 embeddings.npy  – (N, 384) float32  raw sentence embeddings
 sentences.pkl   – cleaned sentence list aligned row-for-row with embeddings
-features.npy    – (N, 50)  float32  PCA-reduced feature matrix for clustering
+features.npy    – (N, 100)  float32  PCA-reduced feature matrix for clustering
 
 Usage
 -----
@@ -55,30 +55,53 @@ FEATURES_OUT   = "features.npy"
 BATCH_SIZE     = 64
 RANDOM_STATE   = 42
 
-# 50 PCA components retain ~56 % of variance from the 384-dim MiniLM space.
-# Keeping dimensionality moderate avoids the curse of dimensionality, which
-# causes pairwise Euclidean distances to become increasingly uniform as
-# dimensionality grows — a known problem for distance-based clustering.
-PCA_COMPONENTS = 50
+# 100 PCA components retain ~74.6 % of variance from the 384-dim MiniLM space.
+# Retaining 100 components is necessary to preserve the fine-grained geometric
+# separation of the small Wikipedia sub-corpus from the larger modern English
+# cluster — a signal lost when fewer components are used.
+PCA_COMPONENTS = 100
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 def load_data(path: str) -> pd.DataFrame:
     """
-    Read the tab-separated file, re-joining lines that were split by
-    embedded newline characters in the Sentence field, so that all 1,760
-    instances receive a label.
+    Read the tab-separated file, correctly handling sentences that span
+    multiple physical lines due to embedded newline characters.
+    Lines starting with an integer ID followed by a tab begin a new record;
+    all other lines are continuations of the previous sentence.
+    This ensures all 1,760 instances are loaded and receive a label.
     """
+    records = []
+    current_id = None
+    current_sentence = []
+
     with open(path, encoding="utf-8", errors="replace") as f:
-        raw = f.read()
+        lines = f.readlines()
 
-    # Sentences with embedded \n were serialised as literal \\n — unescape
-    # them to a space so the row stays on one physical line for parsing.
-    raw = raw.replace("\\n", " ")
+    for line in lines[1:]:  # skip header
+        parts = line.split("\t", 1)
+        if len(parts) == 2 and parts[0].strip().isdigit():
+            # New record — save the previous one first
+            if current_id is not None:
+                records.append({
+                    "ID": current_id,
+                    "Sentence": " ".join(current_sentence).strip()
+                })
+            current_id = int(parts[0].strip())
+            current_sentence = [parts[1].rstrip("\n")]
+        else:
+            # Continuation line — append to current sentence
+            if current_id is not None:
+                current_sentence.append(line.rstrip("\n"))
 
-    import io
-    df = pd.read_csv(io.StringIO(raw), sep="\t", encoding="utf-8")
-    df.columns = df.columns.str.strip()
+    # Save the final record
+    if current_id is not None:
+        records.append({
+            "ID": current_id,
+            "Sentence": " ".join(current_sentence).strip()
+        })
+
+    df = pd.DataFrame(records)
 
     required_cols = {"ID", "Sentence"}
     if not required_cols.issubset(set(df.columns)):
@@ -94,9 +117,9 @@ def clean_text(text: str) -> str:
     Light-touch cleaning that preserves linguistic content.
 
     Steps applied:
-      - Unescape literal \\n sequences introduced during dataset creation
       - Remove escaped quotation marks
       - Collapse repeated whitespace / tabs into a single space
+      - Collapse actual newline characters into a single space.
       - Strip leading / trailing whitespace
 
     Heavy normalisation (lowercasing, punctuation removal, stopword removal)
@@ -105,7 +128,6 @@ def clean_text(text: str) -> str:
     """
     if not isinstance(text, str):
         return "empty"
-    text = text.replace("\\n", " ")
     text = text.replace('\\"', '"').replace("\\'", "'")
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n+",    " ", text)
@@ -189,7 +211,7 @@ def preprocess_pipeline(data_path: str) -> Tuple[np.ndarray, List[str], np.ndarr
 
     Returns
     -------
-    X_pca : np.ndarray, shape (N, 50)
+    X_pca : np.ndarray, shape (N, 100)
         PCA-reduced feature matrix used for AHC clustering and silhouette
         evaluation.  Variance-weighted: earlier components carry more
         semantic signal and naturally receive more weight in Euclidean distance.

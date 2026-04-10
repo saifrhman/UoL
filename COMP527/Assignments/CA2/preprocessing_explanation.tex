@@ -106,8 +106,8 @@
 \section*{Overview}
 % =============================================================================
 
-The preprocessing pipeline transforms raw natural language sentences into a compact, 
-geometrically well-structured numerical representation suitable for Agglomerative 
+The preprocessing pipeline transforms raw natural language sentences into a compact,
+geometrically well-structured numerical representation suitable for Agglomerative
 Hierarchical Clustering (AHC). The pipeline consists of four sequential stages:
 
 \begin{enumerate}
@@ -117,21 +117,24 @@ Hierarchical Clustering (AHC). The pipeline consists of four sequential stages:
     \item Dimensionality reduction via Principal Component Analysis (PCA)
 \end{enumerate}
 
-Each stage is motivated by theoretical considerations specific to text clustering 
+Each stage is motivated by theoretical considerations specific to text clustering
 and the intrinsic properties of the chosen embedding model.
 
 % =============================================================================
 \section{Data Loading and Text Cleaning}
 % =============================================================================
 
-The dataset is stored in a tab-separated file with two columns: an integer identifier
-(\texttt{ID}) and a raw sentence string (\texttt{Sentence}).  The file is read with \texttt{pandas} after a raw-text pre-processing step that
-unescapes literal \verb|\\n| sequences embedded in the \texttt{Sentence} field.
-Without this step, pandas interprets embedded newlines as row boundaries,
-splitting multi-line sentences into malformed fragments that would be silently
-dropped, reducing the dataset from 1{,}760 to 1{,}733 instances.
-Pre-unescaping at the raw-text level ensures all 1{,}760 instances are
-parsed correctly and receive a cluster label.  The resulting DataFrame has shape $(1733, 2)$, with the \texttt{Sentence} column containing the raw text strings.
+The dataset is stored in a tab-separated file with two columns: an integer
+identifier (\texttt{ID}) and a raw sentence string (\texttt{Sentence}).  The
+file is read line by line using a custom parser that identifies record boundaries
+by detecting lines whose first field is a positive integer followed by a tab
+character.  Any line that does not match this pattern is treated as a
+continuation of the previous sentence, with its content appended and separated
+by a space.  This approach correctly handles sentences that span multiple
+physical lines due to embedded newline characters in the source file, ensuring
+all 1{,}760 instances are loaded and each receives a cluster label.  The
+resulting DataFrame has shape $(1{,}760,\,2)$, with the \texttt{Sentence}
+column containing the raw text strings.
 
 \subsection{Cleaning Strategy}
 
@@ -141,6 +144,7 @@ A deliberate \textbf{light-touch cleaning strategy} is adopted, comprising only:
   \item Removal of escaped quotation marks (\verb|\"| and \verb|\'|).
   \item Collapsing of repeated whitespace characters (spaces, tabs) into a
         single space.
+  \item Collapsing of actual newline characters into a single space.
   \item Stripping of leading and trailing whitespace.
   \item Replacement of empty strings with the placeholder token \texttt{`empty'}
         to preserve exact row alignment between the feature matrix and
@@ -214,7 +218,7 @@ while dissimilar sentences are pushed apart.
   \item \textbf{Computational efficiency.}  With 33 million parameters and a
         384-dimensional output, MiniLM provides a strong balance between
         embedding quality and inference speed, making it practical for a
-        1{,}733-sentence dataset.
+        1{,}760-sentence dataset.
 
   \item \textbf{Cosine-similarity training objective.}  The MNR loss explicitly
         trains the model to make cosine similarity between sentence embeddings
@@ -236,7 +240,7 @@ Sentences are encoded in batches of 64 with
 \texttt{normalize\_embeddings=False}.  Normalisation is deliberately disabled
 at this stage because it is applied explicitly in the subsequent pipeline step,
 maintaining clear separation of concerns.  The output is a \texttt{float32}
-matrix of shape $(1733, 384)$.
+matrix of shape $(1760,\,384)$.
 
 \begin{insightbox}
 \textbf{Influence on clustering:} The quality of the embedding is the single
@@ -309,19 +313,19 @@ the semantic geometry of the embedding space.
 % =============================================================================
 
 PCA (Pearson, 1901; Jolliffe, 2002) is applied to the L2-normalised matrix
-$\hat{X} \in \mathbb{R}^{1733 \times 384}$, projecting each sentence vector
-into the subspace spanned by the top 50 principal components:
+$\hat{X} \in \mathbb{R}^{1760 \times 384}$, projecting each sentence vector
+into the subspace spanned by the top 100 principal components:
 
 \begin{mathbox}
 \[
   X_{\mathrm{pca}} \;=\; \hat{X}\,W,
-  \qquad W \in \mathbb{R}^{384 \times 50}
+  \qquad W \in \mathbb{R}^{384 \times 100}
 \]
 \end{mathbox}
 
 where the columns of $W$ are the eigenvectors of the sample covariance matrix
-$\hat{X}^{\top}\hat{X}$, ordered by decreasing eigenvalue.  The 50 retained
-components collectively explain \textbf{56.63\%} of the total variance in the
+$\hat{X}^{\top}\hat{X}$, ordered by decreasing eigenvalue.  The 100 retained
+components collectively explain \textbf{74.55\%} of the total variance in the
 normalised embedding matrix.
 
 \subsection{Why Apply PCA?}
@@ -332,10 +336,10 @@ normalised embedding matrix.
         Formally, for $N$ random points in $\mathbb{R}^{d}$, the ratio
         $(d_{\max} - d_{\min})/d_{\min} \to 0$ as $d \to \infty$, meaning all
         points appear equidistant.  This degrades any distance-based clustering
-        algorithm.  Reducing from 384 to 50 dimensions substantially mitigates
+        algorithm.  Reducing from 384 to 100 dimensions substantially mitigates
         this effect.
 
-  \item \textbf{Noise suppression.}  Components PC$_{51}$ through PC$_{384}$
+  \item \textbf{Noise suppression.}  Components PC$_{101}$ through PC$_{384}$
         capture noise and sentence-level idiosyncrasies rather than shared
         semantic structure.  Discarding them acts as a low-rank denoising
         filter, retaining only the dominant directions of semantic variation
@@ -343,7 +347,7 @@ normalised embedding matrix.
 
   \item \textbf{Computational efficiency.}  AHC computes an $O(N^{2})$
         pairwise distance matrix.  Reducing feature dimensionality from 384
-        to 50 reduces memory and compute requirements substantially without
+        to 100 reduces memory and compute requirements substantially without
         sacrificing cluster quality.
 
   \item \textbf{Literature precedent.}  Petukhova et al.\ (2024) use PCA as
@@ -352,14 +356,19 @@ normalised embedding matrix.
         the peer-reviewed literature.
 \end{itemize}
 
-\subsection{Why 50 Components?}
+\subsection{Why 100 Components?}
 
-The choice of 50 components balances variance retention against dimensionality.
-50 components retain approximately 56--58\% of total variance from MiniLM
-embeddings across diverse text datasets, which has been found effective for AHC
-in the text clustering literature.  Retaining too many components reintroduces
-the curse of dimensionality; retaining too few discards discriminative semantic
-structure.  A moderate value of 50 is a well-established practical compromise.
+The choice of 100 components is motivated by the need to retain sufficient
+variance to preserve the fine-grained geometric separation between the small
+Wikipedia sub-corpus (90 documents) and the larger modern English cluster
+(880 documents).  At 50 components, the cumulative explained variance is
+approximately 56.6\%, and the Wikipedia signal --- which resides in lower-ranked
+principal components that encode formal encyclopaedic register --- is discarded,
+causing the silhouette-optimal $K$ to reduce from 3 to 2.  At 100 components,
+74.55\% of total variance is retained, preserving this fine-grained distinction
+and correctly recovering a three-cluster partition.  Retaining too many
+components (e.g., 200+) reintroduces the curse of dimensionality; 100 strikes
+the correct balance between discriminative power and geometric stability.
 
 \subsection{The PCA Output Is NOT Re-Normalised --- By Design}
 
@@ -369,7 +378,7 @@ theoretically motivated.
 
 PCA is a variance-preserving projection: PC$_1$ has the largest eigenvalue and
 the largest variance across the dataset; PC$_2$ the second largest; and so on.
-In the resulting 50-dimensional space, Euclidean distance naturally weights the
+In the resulting 100-dimensional space, Euclidean distance naturally weights the
 earlier components more heavily, because they contribute more to the squared
 distance:
 
@@ -377,7 +386,7 @@ distance:
 \[
   d^{2}(\mathbf{a},\,\mathbf{b})
   \;=\;
-  \sum_{k=1}^{50}(a_k - b_k)^{2}
+  \sum_{k=1}^{100}(a_k - b_k)^{2}
 \]
 \end{mathbox}
 
@@ -386,7 +395,7 @@ axes of variation (e.g., PC$_1$ encodes the dominant contrast between
 Shakespearean and modern English), this automatic variance weighting provides
 useful inductive bias for cluster discovery.
 
-If $X_{\mathrm{pca}}$ were re-normalised, all 50 dimensions would be forced to
+If $X_{\mathrm{pca}}$ were re-normalised, all 100 dimensions would be forced to
 contribute \emph{equally} to distances, erasing this variance structure.
 Empirical validation confirmed this: re-normalising after PCA caused the optimal
 $K$ to collapse from 3 to 2, merging the Wikipedia cluster into the larger
@@ -398,8 +407,8 @@ equal weight by re-normalisation, reducing overall discriminability.
 \textbf{Influence on clustering:} PCA's variance-weighted geometry causes
 Ward-linkage AHC to weight the most semantically informative dimensions most
 heavily.  This enables the algorithm to recover fine-grained clusters --- such
-as separating the small Wikipedia sub-corpus (89 documents) from the larger
-reviews/news cluster (878 documents) --- that collapse to a trivial two-cluster
+as separating the small Wikipedia sub-corpus (90 documents) from the larger
+reviews/news cluster (880 documents) --- that collapse to a trivial two-cluster
 partition in a uniformly-weighted re-normalised space.
 \end{insightbox}
 
@@ -416,23 +425,23 @@ partition in a uniformly-weighted re-normalised space.
                  & \textbf{Output} & \textbf{Key Purpose} \\
   \midrule
   1 & Data loading \& cleaning
-    & Raw text file     & 1{,}733 sentences
+    & Raw text file      & 1{,}760 sentences
     & Quality \& row alignment \\
   2 & MiniLM-L12-v2 encoding
-    & 1{,}733 sentences & $(1733,\,384)$
+    & 1{,}760 sentences  & $(1760,\,384)$
     & Semantic representation \\
   3 & L2 normalisation
-    & $(1733,\,384)$    & $(1733,\,384)$ unit vectors
+    & $(1760,\,384)$     & $(1760,\,384)$ unit vectors
     & Angular variance for PCA \\
-  4 & PCA (50 components)
-    & $(1733,\,384)$    & $(1733,\,50)$ variance-weighted
+  4 & PCA (100 components)
+    & $(1760,\,384)$     & $(1760,\,100)$ variance-weighted
     & Dimensionality reduction \\
   \bottomrule
 \end{tabularx}
 \caption{Summary of the four-stage preprocessing pipeline.}
 \end{table}
 
-The final output is a \texttt{float32} matrix of shape $(1733,\,50)$ in which
+The final output is a \texttt{float32} matrix of shape $(1760,\,100)$ in which
 each row is the variance-weighted PCA projection of the corresponding sentence's
 L2-normalised MiniLM embedding.  This matrix is passed directly to the AHC
 clustering algorithm.
@@ -457,7 +466,7 @@ embedding model.  The key stage-to-stage interactions are:
         rather than sentence-length variation, maximising discriminative
         information per component.
 
-  \item \textbf{PCA $\to$ AHC quality.}  Reducing to 50 variance-weighted
+  \item \textbf{PCA $\to$ AHC quality.}  Reducing to 100 variance-weighted
         dimensions eliminates noise, mitigates the curse of dimensionality, and
         concentrates discriminative semantic information in the first few
         components, which Ward-linkage AHC naturally weights more heavily.

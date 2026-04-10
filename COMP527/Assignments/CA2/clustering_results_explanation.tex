@@ -142,8 +142,8 @@ the geometry of the resulting clusters:
   \item \textbf{No assumption about cluster shape.}  Unlike $K$-means
         (MacQueen, 1967), which assumes spherical, equally-sized clusters,
         AHC can recover clusters of arbitrary shape and size.  The dataset
-        exhibits strong size imbalance: Cluster~2 (Shakespeare, 766 documents)
-        and Cluster~3 (Wikipedia, 89 documents).
+        exhibits strong size imbalance: Cluster~2 (Shakespeare, 790 documents)
+        and Cluster~3 (Wikipedia, 90 documents).
 
   \item \textbf{Deterministic output.}  AHC produces the same result on
         every run, unlike $K$-means which depends on random centroid
@@ -214,7 +214,7 @@ equivalent:
 PCA of unit vectors preserves this angular geometry in the principal component
 subspace, so Euclidean distance in PCA space remains semantically meaningful.
 Second, the PCA output is deliberately left un-normalised, so Euclidean
-distances in the 50-dimensional PCA space weight the earlier, higher-variance
+distances in the 100-dimensional PCA space weight the earlier, higher-variance
 principal components more heavily --- since these components capture the most
 semantically significant axes of variation, this variance weighting is a useful
 inductive bias for cluster discovery.
@@ -263,16 +263,16 @@ clustering, ensuring a fully consistent and internally valid evaluation.
   \textbf{$K$} & \textbf{Silhouette Coefficient} & \textbf{Notes} \\
   \midrule
   1  & N/A      & Undefined --- requires at least 2 clusters \\
-  2  & 0.108900 & \\
+  2  & 0.084815 & \\
   \rowcolor{greenbg}
-  3  & \textbf{0.116243} & \textbf{Global optimum (peak)} \\
-  4  & 0.087409 & \\
-  5  & 0.064581 & \\
-  6  & 0.055980 & \\
-  7  & 0.056356 & \\
-  8  & 0.064259 & \\
-  9  & 0.070488 & \\
-  10 & 0.077989 & \\
+  3  & \textbf{0.091923} & \textbf{Global optimum (peak)} \\
+  4  & 0.070843 & \\
+  5  & 0.045152 & \\
+  6  & 0.035833 & \\
+  7  & 0.039736 & \\
+  8  & 0.041355 & \\
+  9  & 0.045331 & \\
+  10 & 0.050710 & \\
   \bottomrule
 \end{tabular}
 \caption{Silhouette coefficients for AHC (Euclidean, Ward) over $K = 1$
@@ -286,13 +286,13 @@ clustering, ensuring a fully consistent and internally valid evaluation.
 \subsection{Quantitative Justification: Silhouette Analysis}
 
 The silhouette analysis unambiguously identifies $\mathbf{K=3}$ as the optimal
-number of clusters, with a peak coefficient of $\mathbf{0.116243}$.  The score
-at $K=3$ exceeds that at $K=2$ (0.108900) and all higher values of $K$, which
-decrease monotonically to $0.055980$ at $K=6$ before slightly recovering at
-$K=9$--$10$.  The shape of the curve --- a clear peak at $K=3$ followed by
+number of clusters, with a peak coefficient of $\mathbf{0.091923}$.  The score
+at $K=3$ exceeds that at $K=2$ (0.084815) and all higher values of $K$, which
+decrease to a minimum of $0.035833$ at $K=6$ before gradually recovering
+from $K=7$ onwards.  The shape of the curve --- a clear peak at $K=3$ followed by
 sustained decline --- is a strong quantitative signal that the data contains
 three natural groupings at the granularity captured by the MiniLM embedding and
-the 50-dimensional PCA feature space.
+the 100-dimensional PCA feature space.
 
 \subsection{Qualitative Justification: Semantic Cluster Interpretation}
 
@@ -310,15 +310,15 @@ identities:
   \textbf{Cluster} & \textbf{Size} & \textbf{Domain} &
   \textbf{Linguistic Characteristics} \\
   \midrule
-  1 & 878 (50.6\%) & Reviews + News &
+  1 & 880 (50.0\%) & Reviews + News &
     Modern English prose: restaurant and business reviews (Yelp-style) and
     CNN-style news articles.  Informal to formal register, contemporary
     vocabulary, first and third person narration. \\[4pt]
-  2 & 766 (44.2\%) & Shakespeare (Coriolanus) &
+  2 & 790 (44.9\%) & Shakespeare (Coriolanus) &
     Early Modern English: play dialogue from Coriolanus.  Archaic vocabulary,
     poetic metre, character prefixes (e.g., \textsc{Coriolanus:},
     \textsc{Aufidius:}), iambic pentameter constructions. \\[4pt]
-  3 & 89\ \ (5.1\%)  & Wikipedia (Notre Dame) &
+  3 & 90\ \ \ (5.1\%)  & Wikipedia (Notre Dame) &
     Encyclopaedic prose: factual Wikipedia-style articles about Notre Dame
     University.  Highly formal, third-person, dense noun phrases,
     institutional and academic vocabulary. \\
@@ -337,7 +337,7 @@ Shakespeare.  This is not a failure of the algorithm but an \textbf{accurate
 reflection of the linguistic properties of the data}.
 
 If a four-cluster solution were desired for theoretical reasons, $K=4$ would be
-the next candidate; however, its silhouette score of $0.087409$ --- a 25\% drop
+the next candidate; however, its silhouette score of $0.070843$ --- a 23\% drop
 from $K=3$ --- provides no quantitative support for the additional split.  The
 silhouette criterion is thus unambiguous: $K=3$ is optimal.
 
@@ -348,10 +348,10 @@ structurally low compared to geometric or image datasets, because sentence
 embeddings reside in a dense, high-dimensional space where cluster boundaries
 are inherently fuzzy.  Petukhova et al.\ (2024) report silhouette scores for
 BERT-family models ranging from $0.016$ to $0.224$ across five diverse text
-datasets.  The score of $0.116243$ achieved here falls comfortably within this
-range --- comparable to BERT + AHC on the SyskillWebert dataset
-($\mathrm{SS} = 0.152$) and notably higher than BERT + $k$-means on the
-20Newsgroups dataset ($\mathrm{SS} = 0.048$).
+datasets.  The score of $0.091923$ achieved here falls comfortably within this
+range --- above BERT + $k$-means on the 20Newsgroups dataset
+($\mathrm{SS} = 0.048$) and consistent with reported scores for AHC on
+comparable text corpora.
 
 This confirms that the result is realistic, well-calibrated, and consistent
 with state-of-the-art benchmarks.  A silhouette score approaching $1.0$ would
@@ -365,20 +365,9 @@ well-separated.
 \section{Additional Considerations and Limitations}
 % =============================================================================
 
-\subsection{Row Count Discrepancy}
-
-The dataset specification states 1{,}760 instances; however, only 1{,}733 rows
-are successfully loaded.  The discrepancy arises because a subset of rows
-contains literal newline characters embedded within the \texttt{Sentence} field.
-When \texttt{pandas} reads the tab-separated file, these embedded newlines are
-interpreted as line breaks, producing malformed records that are silently
-discarded via \texttt{on\_bad\_lines=`skip'}.  The \texttt{label.txt} output
-contains exactly 1{,}733 labels, one per successfully loaded instance, in
-original row order.
-
 \subsection{Cluster Size Imbalance}
 
-Cluster~3 (Wikipedia) contains only 89 documents ($\approx 5.1\%$ of the
+Cluster~3 (Wikipedia) contains only 90 documents ($\approx 5.1\%$ of the
 dataset).  This imbalance is a genuine property of the data rather than an
 algorithmic artefact.  Ward linkage is the linkage criterion most resistant to
 distortion by cluster size imbalance: its variance-minimisation objective does

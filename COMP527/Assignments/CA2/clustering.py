@@ -12,7 +12,7 @@ Usage
 
 Full pipeline
 -------------
-    preprocessing.py : embed  →  L2 normalise  →  PCA (50 components)
+    preprocessing.py : embed  →  L2 normalise  →  PCA (100 components)
     clustering.py    : AHC (Euclidean + Ward)  →  silhouette  →  outputs
 
 AHC configuration rationale
@@ -81,7 +81,7 @@ def evaluate_ahc(
 
     Parameters
     ----------
-    X : np.ndarray, shape (N, 50)
+    X : np.ndarray, shape (N, 100)
         Variance-weighted PCA feature matrix from preprocessing.
 
     Returns
