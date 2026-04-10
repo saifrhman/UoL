@@ -125,19 +125,19 @@ and the intrinsic properties of the chosen embedding model.
 % =============================================================================
 
 The dataset is stored in a tab-separated file with two columns: an integer identifier
-(\texttt{ID}) and a raw sentence string (\texttt{Sentence}).  The file is read with
-\texttt{pandas}, with malformed rows --- arising from sentences containing literal
-embedded newline characters --- silently discarded via the
-\texttt{on\_bad\_lines=`skip'} parameter.  This produces 1{,}733 valid data
-instances from the original 1{,}760.
+(\texttt{ID}) and a raw sentence string (\texttt{Sentence}).  The file is read with \texttt{pandas} after a raw-text pre-processing step that
+unescapes literal \verb|\\n| sequences embedded in the \texttt{Sentence} field.
+Without this step, pandas interprets embedded newlines as row boundaries,
+splitting multi-line sentences into malformed fragments that would be silently
+dropped, reducing the dataset from 1{,}760 to 1{,}733 instances.
+Pre-unescaping at the raw-text level ensures all 1{,}760 instances are
+parsed correctly and receive a cluster label.  The resulting DataFrame has shape $(1733, 2)$, with the \texttt{Sentence} column containing the raw text strings.
 
 \subsection{Cleaning Strategy}
 
 A deliberate \textbf{light-touch cleaning strategy} is adopted, comprising only:
 
 \begin{itemize}
-  \item Unescaping of literal \verb|\n| sequences introduced during dataset
-        serialisation.
   \item Removal of escaped quotation marks (\verb|\"| and \verb|\'|).
   \item Collapsing of repeated whitespace characters (spaces, tabs) into a
         single space.
