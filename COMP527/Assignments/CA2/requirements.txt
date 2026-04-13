@@ -6,3 +6,4 @@ scikit-learn
 matplotlib
 sentence-transformers
 torch
+umap-learn
