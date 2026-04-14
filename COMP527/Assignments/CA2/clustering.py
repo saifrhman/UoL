@@ -12,56 +12,41 @@ Usage
 
 Full pipeline
 -------------
-    preprocessing.py : embed (all-mpnet-base-v2, 768-dim)
-                       → L2 normalise
-                       → Adaptive PCA (data-driven variance threshold)
-                       → UMAP (non-linear manifold projection, 20-dim)
+    preprocessing.py : embed (all-mpnet-base-v2, 768-dim, all rows)
+                       -> L2 normalise
+                       -> Adaptive PCA (80 % variance threshold)
+                       -> UMAP (cosine, n_components=5, min_dist=0.0,
+                                n_neighbors=10)
 
-    clustering.py    : AHC (Euclidean + Ward)
-                       → silhouette analysis (K = 1 … 10)
-                       → outputs
+    clustering.py    : silhouette sweep K=1..10
+                       -> best K selected automatically by silhouette score
+                       -> AHC (Ward, Euclidean) at best K
+                       -> outputs
 
-AHC configuration rationale
-────────────────────────────
-metric  = Euclidean
-    UMAP output lies in an unconstrained Euclidean space (points are NOT
-    unit-normalised after UMAP).  Ward linkage is mathematically defined
-    only for Euclidean distance, and the UMAP projection preserves cluster
-    topology in this space, making Euclidean distances semantically
-    meaningful for AHC.
+Chosen K rationale
+------------------
+The optimal K is selected automatically as the value in K = 2 ... 10 that
+produces the highest silhouette coefficient.  No K is hardcoded.  The
+silhouette sweep and the final clustering are fully consistent: the same AHC
+configuration (Ward linkage, Euclidean distance, 5-dim UMAP feature space)
+is used for both.
 
-linkage = Ward
-    Ward linkage merges the pair of clusters whose union minimises the
-    increase in total within-cluster sum of squares (WCSS).  This produces
-    compact, balanced clusters and is robust against the chaining artefact
-    that afflicts single and average linkage on text data.  Ward is the
-    standard linkage for AHC in text clustering benchmarks (Petukhova et
-    al., 2024).
+AHC configuration
+-----------------
+metric  = Euclidean  (correct for UMAP output space; Ward requires Euclidean)
+linkage = Ward       (minimises within-cluster variance; robust to chaining)
 
-Silhouette scoring
-──────────────────
-Computed with the same Euclidean metric in the same UMAP feature space used
-for clustering — a fully consistent internal validity measure.  Silhouette
-scores for text clustering with BERT-family embeddings plus UMAP are
-typically higher (0.15–0.50) than those without UMAP (0.05–0.20) because
-UMAP sharpens cluster boundaries in the projected space (Petukhova et al.,
-2024; Vizuara, 2024).
-
-Calinski-Harabasz Index
-────────────────────────
-The Calinski-Harabasz Index (CHI) is reported alongside the silhouette score
-as a complementary internal validity metric.  CHI = Tr(Bk) / Tr(Wk) × (N-k)
-/ (k-1), where Tr(Bk) is the between-cluster dispersion and Tr(Wk) the
-within-cluster dispersion.  Higher is better.  CHI tends to favour compact,
-well-separated clusters and provides a second line of evidence for the
-optimal K.
+Silhouette
+----------
+Computed in the same 5-dim UMAP Euclidean space as clustering -- fully
+self-consistent.
 
 Outputs
 -------
-    label.txt              – one 1-indexed cluster label per data instance
-    clustering_results.csv – sentence, cluster, algorithm per row
-    silhouette_scores.csv  – silhouette coefficient and CHI for K = 1 … 10
-    silhouette_plot.png    – line chart of silhouette coefficient vs K
+    label.txt              -- one 1-indexed cluster label per data instance
+    clustering_results.csv -- sentence, cluster, algorithm per row
+    silhouette_scores.csv  -- silhouette coefficient for K = 1 ... 10
+    silhouette_plot.png    -- line chart of silhouette coefficient vs K
 """
 
 from __future__ import annotations
@@ -75,7 +60,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics import silhouette_score, calinski_harabasz_score
+from sklearn.metrics import silhouette_score
 
 from preprocessing import preprocess_pipeline
 
@@ -93,22 +78,17 @@ def evaluate_ahc(
     X: np.ndarray,
 ) -> Tuple[Optional[np.ndarray], float, Optional[int], List[dict]]:
     """
-    Fit AHC for K = 1 … 10 and return the best result by silhouette score.
+    Fit AHC for K = 1 ... 10 and return the best result by silhouette score.
 
-    Parameters
-    ----------
-    X : np.ndarray, shape (N, n_features)
-        Feature matrix from preprocessing (UMAP output).  Ward linkage with
-        Euclidean distance is appropriate because UMAP output lies in an
-        unconstrained Euclidean space.
+    The best K is selected automatically as the K in {2, ..., 10} that
+    maximises the silhouette coefficient.  No K is hardcoded.
 
     Returns
     -------
-    best_labels : ndarray or None   – 0-indexed cluster assignments for best K
-    best_score  : float             – highest silhouette score found
-    best_k      : int or None       – K that achieved best_score
-    score_rows  : list of dicts     – per-K records for CSV and plot output
-                                      (includes both silhouette and CHI)
+    best_labels : 0-indexed cluster assignments for best K
+    best_score  : highest silhouette score found
+    best_k      : K that achieved best_score
+    score_rows  : per-K records for CSV and plot
     """
     best_score  = -1.0
     best_labels = None
@@ -117,49 +97,36 @@ def evaluate_ahc(
 
     print("\nEvaluating Agglomerative Hierarchical Clustering (AHC)")
     print("Configuration : metric=euclidean, linkage=ward")
-    print("Evaluation    : silhouette score + Calinski-Harabasz Index\n")
+    print("Feature space : 5-dim UMAP (cosine neighbourhood graph)\n")
 
     for k in K_RANGE:
         if k == 1:
-            # Both silhouette and CHI require at least 2 clusters
-            print(f"  K={k:2d}  silhouette = N/A  CHI = N/A  "
-                  f"(undefined for a single cluster)")
-            score_rows.append({
-                "algorithm": "AHC", "k": k,
-                "silhouette": np.nan, "calinski_harabasz": np.nan
-            })
+            print(f"  K={k:2d}  silhouette = N/A  (undefined for a single cluster)")
+            score_rows.append({"algorithm": "AHC", "k": k, "silhouette": np.nan})
             continue
 
-        model = AgglomerativeClustering(
+        labels = AgglomerativeClustering(
             n_clusters=k,
             metric="euclidean",
             linkage="ward",
-        )
-        labels = model.fit_predict(X)
-        sil    = silhouette_score(X, labels, metric="euclidean")
-        chi    = calinski_harabasz_score(X, labels)
-        print(f"  K={k:2d}  silhouette = {sil:.6f}   CHI = {chi:10.2f}")
+        ).fit_predict(X)
+        score = silhouette_score(X, labels, metric="euclidean")
+        print(f"  K={k:2d}  silhouette = {score:.6f}")
 
-        if sil > best_score:
-            best_score  = sil
+        if score > best_score:
+            best_score  = score
             best_labels = labels.copy()
             best_k      = k
 
-        score_rows.append({
-            "algorithm": "AHC", "k": k,
-            "silhouette": sil, "calinski_harabasz": chi
-        })
+        score_rows.append({"algorithm": "AHC", "k": k, "silhouette": score})
 
     return best_labels, best_score, best_k, score_rows
 
 
 def save_labels(labels: np.ndarray, path: str = LABELS_OUT) -> None:
-    """
-    Write one cluster label per line to label.txt.
-    Labels are 1-indexed (1 … K) to match the assignment specification.
-    """
+    """Write one 1-indexed cluster label per line to label.txt."""
     np.savetxt(path, labels + 1, fmt="%d")
-    print(f"\n[save] Labels             -> {path}")
+    print(f"\n[save] Labels             -> {path}  ({len(labels):,} rows)")
 
 
 def save_results(
@@ -178,64 +145,53 @@ def save_results(
 
 
 def save_scores(score_rows: List[dict], path: str = SCORES_OUT) -> None:
-    """Write per-K silhouette and CHI scores to CSV."""
+    """Write per-K silhouette scores to CSV."""
     pd.DataFrame(score_rows).to_csv(path, index=False, encoding="utf-8")
     print(f"[save] Silhouette scores   -> {path}")
 
 
-def plot_silhouette_scores(score_rows: List[dict], path: str = PLOT_OUT) -> None:
+def plot_silhouette_scores(
+    score_rows: List[dict],
+    best_k: int,
+    path: str = PLOT_OUT,
+) -> None:
     """
-    Plot silhouette coefficient (primary axis) and Calinski-Harabasz Index
-    (secondary axis) vs K, then save as a PNG file.
-    K=1 is shown on the x-axis but annotated 'N/A' because both metrics are
-    undefined for a single cluster.
+    Plot silhouette coefficient vs K.
+    K=1 is annotated 'N/A'; best_k is marked with a vertical dashed line.
+    The position of the line is determined automatically from the sweep
+    results -- nothing is hardcoded.
     """
     df    = pd.DataFrame(score_rows).sort_values("k")
     valid = df.dropna(subset=["silhouette"])
 
-    fig, ax1 = plt.subplots(figsize=(11, 6))
-
-    # Primary axis: silhouette
-    color_sil = "#1f77b4"
-    ax1.plot(valid["k"], valid["silhouette"],
-             marker="o", linewidth=2.5, color=color_sil, label="Silhouette (left)")
-    ax1.set_xlabel("K (Number of Clusters)", fontsize=12)
-    ax1.set_ylabel("Silhouette Coefficient", color=color_sil, fontsize=12)
-    ax1.tick_params(axis="y", labelcolor=color_sil)
-    ax1.annotate(
-        "N/A", xy=(1, 0), xycoords=("data", "axes fraction"),
-        ha="center", va="bottom", fontsize=9, color="grey",
+    plt.figure(figsize=(10, 6))
+    plt.plot(valid["k"], valid["silhouette"], marker="o", linewidth=2, label="AHC")
+    plt.axvline(x=best_k, color="tomato", linestyle="--", linewidth=1.5,
+                label=f"Best K = {best_k} (data-driven)")
+    plt.annotate(
+        "N/A",
+        xy=(1, 0),
+        xycoords=("data", "axes fraction"),
+        ha="center", va="bottom",
+        fontsize=9, color="grey",
     )
-
-    # Secondary axis: Calinski-Harabasz
-    ax2 = ax1.twinx()
-    color_chi = "#ff7f0e"
-    ax2.plot(valid["k"], valid["calinski_harabasz"],
-             marker="s", linewidth=2, linestyle="--",
-             color=color_chi, label="Calinski-Harabasz (right)")
-    ax2.set_ylabel("Calinski-Harabasz Index", color=color_chi, fontsize=12)
-    ax2.tick_params(axis="y", labelcolor=color_chi)
-
-    # Combined legend
-    lines1, labels1 = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right", fontsize=10)
-
-    plt.title(
-        "Silhouette & Calinski-Harabasz Analysis\n"
-        "AHC (Euclidean + Ward) · all-mpnet-base-v2 + Adaptive PCA + UMAP\n"
-        "K = 1 to 10",
-        fontsize=12,
-    )
-    ax1.set_xticks(list(K_RANGE))
-    ax1.grid(True, linestyle="--", alpha=0.4)
-    fig.tight_layout()
+    plt.xlabel("K (Number of Clusters)")
+    plt.ylabel("Silhouette Coefficient")
+    plt.title("Silhouette Analysis -- AHC (Euclidean + Ward), K = 1 to 10")
+    plt.xticks(list(K_RANGE))
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.legend()
+    plt.tight_layout()
     plt.savefig(path, dpi=150)
     plt.close()
     print(f"[save] Silhouette plot      -> {path}")
 
 
-def print_cluster_samples(sentences: List[str], labels: np.ndarray, n: int = 5) -> None:
+def print_cluster_samples(
+    sentences: List[str],
+    labels: np.ndarray,
+    n: int = 5,
+) -> None:
     """Print the first n sentences from each cluster (1-indexed labels)."""
     df = pd.DataFrame({"sentence": sentences, "cluster": labels + 1})
     print("\nSample documents per cluster")
@@ -249,11 +205,9 @@ def print_cluster_samples(sentences: List[str], labels: np.ndarray, n: int = 5) 
 
 
 def main() -> None:
-    # Accept either no argument (defaults to data_train.txt) or exactly one
-    # filename argument.  More than one argument is a usage error.
     if len(sys.argv) == 1:
         data_path = "data_train.txt"
-        print(f"No data file specified — using default: {data_path}")
+        print(f"No data file specified -- using default: {data_path}")
     elif len(sys.argv) == 2:
         data_path = sys.argv[1]
     else:
@@ -264,31 +218,31 @@ def main() -> None:
         print(f"Error: file not found -> {data_path}")
         sys.exit(1)
 
-    # ── Preprocessing: embed → L2 normalise → adaptive PCA → UMAP ────────
+    # ── Preprocessing ──────────────────────────────────────────────────────
     X, sentences, embeddings = preprocess_pipeline(data_path)
     print(f"\n[features] Shape      : {X.shape}")
     print(f"[features] Sentences  : {len(sentences)}")
     print(f"[features] Embeddings : {embeddings.shape}")
 
-    # ── Clustering: AHC with Euclidean + Ward ─────────────────────────────
+    # ── Silhouette sweep + best K selection ───────────────────────────────
     best_labels, best_score, best_k, score_rows = evaluate_ahc(X)
 
     if best_labels is None or best_k is None:
         raise RuntimeError("AHC produced no valid clustering result.")
 
     print("\n" + "=" * 60)
-    print("Best AHC Result")
+    print("Best AHC Result  (data-driven)")
     print("=" * 60)
     print(f"  Algorithm  : AHC  (euclidean, ward)")
     print(f"  Best K     : {best_k}")
     print(f"  Silhouette : {best_score:.6f}")
 
-    # ── Save all outputs ──────────────────────────────────────────────────
+    # ── Save all outputs ───────────────────────────────────────────────────
     print()
     save_labels(best_labels)
     save_results(sentences, best_labels)
     save_scores(score_rows)
-    plot_silhouette_scores(score_rows)
+    plot_silhouette_scores(score_rows, best_k)
     print_cluster_samples(sentences, best_labels)
 
     print("\nDone.")

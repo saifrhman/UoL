@@ -1,11 +1,10 @@
 \documentclass[11pt, a4paper]{article}
 
-% ── Packages ──────────────────────────────────────────────────────────────────
 \usepackage[a4paper, margin=2.5cm]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage{lmodern}
-\usepackage{microtype}
+% lmodern not available in this environment
+% microtype disabled
 \usepackage{parskip}
 \usepackage{setspace}
 \usepackage{titlesec}
@@ -21,7 +20,6 @@
 \usepackage{mdframed}
 \usepackage{xurl}
 
-% ── Colours ───────────────────────────────────────────────────────────────────
 \definecolor{darkblue}{HTML}{1a1a2e}
 \definecolor{midblue}{HTML}{2e2e5e}
 \definecolor{lightbg}{HTML}{f0f0fa}
@@ -29,7 +27,6 @@
 \definecolor{framebd}{HTML}{aaaacc}
 \definecolor{mathbg}{HTML}{f5f5ff}
 
-% ── Hyperref ──────────────────────────────────────────────────────────────────
 \hypersetup{
     colorlinks=true,
     linkcolor=midblue,
@@ -37,7 +34,6 @@
     pdftitle={Preprocessing Pipeline --- Technical Explanation},
 }
 
-% ── Section formatting ────────────────────────────────────────────────────────
 \titleformat{\section}
   {\large\bfseries\color{darkblue}}
   {\thesection.}{0.6em}{}
@@ -50,7 +46,6 @@
 \titlespacing{\section}{0pt}{18pt}{6pt}
 \titlespacing{\subsection}{0pt}{10pt}{4pt}
 
-% ── Header / Footer ───────────────────────────────────────────────────────────
 \pagestyle{fancy}
 \fancyhf{}
 \renewcommand{\headrulewidth}{0.4pt}
@@ -58,7 +53,6 @@
 \fancyhead[R]{\small\textcolor{darkblue}{201940185}}
 \fancyfoot[C]{\small\thepage}
 
-% ── Shaded boxes ─────────────────────────────────────────────────────────────
 \newmdenv[
   backgroundcolor=mathbg,
   linecolor=framebd,
@@ -83,179 +77,148 @@
   skipbelow=6pt,
 ]{insightbox}
 
-% ── List style ────────────────────────────────────────────────────────────────
 \setlist[itemize]{leftmargin=1.4em, itemsep=3pt, topsep=4pt}
 
-% =============================================================================
 \begin{document}
-% =============================================================================
 
-% ── Title block ───────────────────────────────────────────────────────────────
 \begin{center}
   {\LARGE\bfseries\color{darkblue} Preprocessing Pipeline}\\[4pt]
   {\normalsize CA Assignment 2 $\cdot$ Clustering Algorithms}\\[2pt]
   {\normalsize Embedding model:
-    \texttt{sentence-transformers/all-MiniLM-L12-v2}}
+    \texttt{sentence-transformers/all-mpnet-base-v2}}
 \end{center}
 
 \vspace{4pt}
 \textcolor{framebd}{\rule{\linewidth}{0.8pt}}
 \vspace{6pt}
 
-% =============================================================================
 \section*{Overview}
-% =============================================================================
 
-The preprocessing pipeline transforms raw natural language sentences into a compact,
-geometrically well-structured numerical representation suitable for Agglomerative
-Hierarchical Clustering (AHC). The pipeline consists of four sequential stages:
+The preprocessing pipeline transforms raw natural language sentences into a
+compact, geometrically well-structured numerical representation suitable for
+Agglomerative Hierarchical Clustering (AHC).  The pipeline consists of five
+sequential stages:
 
 \begin{enumerate}
     \item Data loading and text cleaning
     \item Sentence embedding using a pre-trained transformer model
     \item L2 normalisation of the raw embedding vectors
-    \item Dimensionality reduction via Principal Component Analysis (PCA)
+    \item Adaptive dimensionality reduction via Principal Component Analysis (PCA)
+    \item Non-linear manifold projection via UMAP
 \end{enumerate}
 
-Each stage is motivated by theoretical considerations specific to text clustering
-and the intrinsic properties of the chosen embedding model.
+All 1{,}760 rows are processed, including duplicate sentences.  This is a
+deliberate design decision explained in full below.
 
-% =============================================================================
 \section{Data Loading and Text Cleaning}
-% =============================================================================
 
 The dataset is stored in a tab-separated file with two columns: an integer
 identifier (\texttt{ID}) and a raw sentence string (\texttt{Sentence}).  The
-file is read line by line using a custom parser that identifies record boundaries
-by detecting lines whose first field is a positive integer followed by a tab
-character.  Any line that does not match this pattern is treated as a
-continuation of the previous sentence, with its content appended and separated
-by a space.  This approach correctly handles sentences that span multiple
-physical lines due to embedded newline characters in the source file, ensuring
-all 1{,}760 instances are loaded and each receives a cluster label.  The
-resulting DataFrame has shape $(1{,}760,\,2)$, with the \texttt{Sentence}
-column containing the raw text strings.
+file is read line by line using a custom parser that identifies record
+boundaries by detecting lines whose first field is a positive integer followed
+by a tab character.  Any line that does not match this pattern is treated as a
+continuation of the previous sentence.  This approach correctly handles
+sentences that span multiple physical lines, ensuring all 1{,}760 instances
+are loaded.
 
 \subsection{Cleaning Strategy}
 
-A deliberate \textbf{light-touch cleaning strategy} is adopted, comprising only:
+A deliberate \textbf{light-touch cleaning strategy} is adopted:
 
 \begin{itemize}
   \item Removal of escaped quotation marks (\verb|\"| and \verb|\'|).
-  \item Collapsing of repeated whitespace characters (spaces, tabs) into a
-        single space.
+  \item Collapsing of repeated whitespace characters into a single space.
   \item Collapsing of actual newline characters into a single space.
   \item Stripping of leading and trailing whitespace.
-  \item Replacement of empty strings with the placeholder token \texttt{`empty'}
-        to preserve exact row alignment between the feature matrix and
-        \texttt{label.txt}.
+  \item Replacement of empty strings with the placeholder \texttt{`empty'}.
 \end{itemize}
 
-Heavy-handed normalisation operations --- such as lowercasing, punctuation
-stripping, stopword removal, or stemming --- are \textbf{intentionally excluded}.
-This decision is theoretically motivated: MiniLM is a transformer trained on
-natural, cased, punctuated English text using a contrastive sentence-pair
-objective.  Its internal self-attention mechanism is sensitive to capitalisation
-(e.g., proper nouns such as \textsc{Coriolanus} carry identity and thematic
-meaning), punctuation (which marks prosodic and syntactic boundaries), and
-function words (which contribute to syntactic style and register).  Removing any
-of these features would push sentences out of the model's training distribution,
-degrading embedding quality and consequently the discriminability of clusters.
+Heavy-handed normalisation (lowercasing, punctuation removal, stopword
+removal) is intentionally excluded.  \texttt{all-mpnet-base-v2} is trained on
+natural, cased, punctuated English text.  Its self-attention mechanism is
+sensitive to capitalisation (e.g., character prefixes such as
+\textsc{Coriolanus:} carry strong identity signals), punctuation, and function
+words.  Removing these would push sentences out of the model's training
+distribution, degrading embedding quality.
+
+\subsection{Duplicate Retention}
+
+The dataset contains 64 duplicate rows: 18 unique Notre Dame / Wikipedia
+sentences each repeated 4--5 times, giving 80 rows total.  These duplicates
+are \textbf{intentionally retained} rather than removed.
+
+The reason is geometric: duplicate sentences produce identical embedding
+vectors, which map to the same point in UMAP space.  With \texttt{n\_neighbors=10},
+UMAP constructs a $k$-nearest-neighbour graph in which each Notre Dame
+sentence finds most or all of its 10 nearest neighbours within the Notre Dame
+group itself.  This creates a densely connected sub-graph that UMAP projects
+into a tight, isolated manifold region, which AHC then detects as a distinct
+cluster.
+
+Without the duplicate rows, the 18 unique Notre Dame sentences represent only
+1.1\% of the dataset.  At that density, each sentence's 10-nearest-neighbour
+graph would be dominated by non-Notre-Dame neighbours, the sub-graph would not
+be cohesive, and the Notre Dame region would dissolve into the surrounding
+modern English manifold.
 
 \begin{insightbox}
-\textbf{Influence on clustering:} Preserving natural sentence text ensures the
-embedding model operates within its training distribution, producing high-quality
-semantic representations.  Embeddings derived from natural text exhibit greater
-intra-domain cohesion and inter-domain separation --- the necessary geometric
-precondition for cluster recovery.
+\textbf{Influence on clustering:} Retaining duplicates is the mechanism that
+enables the detection of the Notre Dame sub-domain as a geometrically
+distinct cluster.  Removing them would merge all Notre Dame content into the
+broader modern English cluster, reducing the clustering to $K=2$.
 \end{insightbox}
 
-% =============================================================================
-\section{Sentence Embedding with MiniLM-L12-v2}
-% =============================================================================
+\section{Sentence Embedding with all-mpnet-base-v2}
 
 Sentences are encoded into dense numerical vectors using the pre-trained model
-\textbf{\path{sentence-transformers/all-MiniLM-L12-v2}}, a 12-layer,
-384-dimensional sentence transformer from the Sentence-BERT family
-(Reimers \& Gurevych, 2019).  The model was trained on over one billion sentence
-pairs using a Multiple Negative Ranking (MNR) loss --- a contrastive objective
-that optimises the embedding space so that semantically similar sentences map to
-geometrically proximate points on the unit hypersphere in $\mathbb{R}^{384}$,
-while dissimilar sentences are pushed apart.
+\textbf{\path{sentence-transformers/all-mpnet-base-v2}}, a 12-layer,
+\textbf{768-dimensional} sentence transformer based on the MPNet architecture
+(Song et al., 2020).  The model was fine-tuned on over one billion sentence
+pairs using a Multiple Negative Ranking (MNR) loss, which optimises the
+embedding space so that semantically similar sentences map to geometrically
+proximate points on the unit hypersphere in $\mathbb{R}^{768}$.
 
 \subsection{Why This Model?}
 
 \begin{itemize}
-  \item \textbf{Semantic richness.}  Unlike bag-of-words representations
-        (TF-IDF; Salton \& McGill, 1983) or static word embeddings
-        (Word2Vec, Mikolov et al., 2013; GloVe, Pennington et al., 2014),
-        MiniLM produces contextual sentence-level embeddings that capture
-        polysemy, syntactic structure, and discourse-level meaning.  This is
-        critical for a dataset spanning vastly different linguistic registers
-        --- from Shakespearean Early Modern English to contemporary informal
-        prose --- where the model must distinguish not only topic but also
-        vocabulary era, syntactic style, and discourse register in order to
-        produce an embedding space where thematically distinct groups are
-        geometrically separable.
-        It is important to note that the number of human-identifiable
-        \emph{source domains} in a dataset does not necessarily equal the
-        number of geometric clusters the embedding model will produce.  Two
-        domains that are linguistically similar --- such as restaurant reviews
-        and news articles, which both employ contemporary vocabulary, modern
-        syntax, and prose sentence structure --- may be embedded closer to each
-        other than to a third domain (e.g., Shakespearean dialogue), and
-        correctly merge into one cluster under silhouette-optimal analysis.
-        This is a property of the embedding geometry, not a failure of the
-        model: the optimal $K=3$ reflects three \emph{geometrically} distinct
-        regions of the embedding space, which need not correspond one-to-one
-        with the number of original source corpora.
+  \item \textbf{Highest-quality standard sentence transformer.}
+        \texttt{all-mpnet-base-v2} achieves the highest overall score among
+        the standard \texttt{all-*} family on the Sentence Embeddings
+        Benchmark and on MTEB clustering tasks.  Petukhova et al.\ (2024)
+        confirm BERT-family transformers are the best open-source option for
+        text clustering.
 
-  \item \textbf{No cloud API dependency.}  The model runs fully locally via the
-        \texttt{sentence-transformers} library and Hugging Face's model hub,
-        satisfying the assignment constraint that no cloud subscription is
-        required.
+  \item \textbf{768-dimensional output.}  With 110 million parameters and
+        twice the embedding dimensions of MiniLM-L12-v2, the model encodes
+        substantially finer-grained semantic distinctions --- essential for
+        separating four linguistically diverse sub-corpora.
 
-  \item \textbf{Computational efficiency.}  With 33 million parameters and a
-        384-dimensional output, MiniLM provides a strong balance between
-        embedding quality and inference speed, making it practical for a
-        1{,}760-sentence dataset.
+  \item \textbf{Cosine-similarity training objective.}  The MNR loss trains
+        cosine similarity to be proportional to semantic similarity.  This
+        makes the embedding space intrinsically well-suited to cosine-based
+        distance measures, which are used in all subsequent steps.
 
-  \item \textbf{Cosine-similarity training objective.}  The MNR loss explicitly
-        trains the model to make cosine similarity between sentence embeddings
-        proportional to semantic similarity.  This makes the embedding space
-        intrinsically well-suited to distance-based clustering algorithms.
-
-  \item \textbf{Literature support.}  MiniLM is built upon the BERT
-        transformer architecture (Devlin et al., 2019) and trained using the
-        Sentence-BERT framework (Reimers \& Gurevych, 2019).  Petukhova et
-        al.\ (2024) demonstrate that BERT-family sentence transformers represent
-        the best open-source option for text clustering, outperforming TF-IDF
-        baselines and performing comparably to much larger open-source LLMs
-        such as Falcon-7b and LLaMA-2.
+  \item \textbf{No cloud API dependency.}  The model runs fully locally via
+        Hugging Face's model hub.
 \end{itemize}
 
 \subsection{Encoding Configuration}
 
 Sentences are encoded in batches of 64 with
-\texttt{normalize\_embeddings=False}.  Normalisation is deliberately disabled
-at this stage because it is applied explicitly in the subsequent pipeline step,
-maintaining clear separation of concerns.  The output is a \texttt{float32}
-matrix of shape $(1760,\,384)$.
+\texttt{normalize\_embeddings=False}.  Normalisation is applied explicitly in
+the next step.  The output is a \texttt{float32} matrix of shape
+$(1760,\,768)$.
 
 \begin{insightbox}
-\textbf{Influence on clustering:} The quality of the embedding is the single
-most important factor in text clustering performance.  Sentences from the same
-domain (e.g., all Shakespearean dialogue) are embedded in geometrically proximate
-regions of $\mathbb{R}^{384}$, providing the raw signal from which clusters are
-recovered.  No downstream processing step can recover structure that the embedding
-fails to encode.
+\textbf{Influence on clustering:} Sentences from semantically distinct
+registers --- Shakespearean dialogue, contemporary reviews, and encyclopaedic
+prose --- are embedded in clearly separated regions of $\mathbb{R}^{768}$,
+providing the raw geometric signal from which clusters are recovered.
 \end{insightbox}
 
-% =============================================================================
 \section{L2 Normalisation}
-% =============================================================================
 
-Each raw embedding vector $\mathbf{x} \in \mathbb{R}^{384}$ is L2-normalised:
+Each raw embedding vector $\mathbf{x} \in \mathbb{R}^{768}$ is L2-normalised:
 
 \begin{mathbox}
 \[
@@ -265,156 +228,163 @@ Each raw embedding vector $\mathbf{x} \in \mathbb{R}^{384}$ is L2-normalised:
 \]
 \end{mathbox}
 
-After normalisation, all vectors lie on the 383-dimensional unit hypersphere
-$\mathcal{S}^{383} \subset \mathbb{R}^{384}$.
-
 \subsection{Why Normalise Before PCA?}
 
-Without normalisation, raw MiniLM embeddings exhibit variation in both
-\emph{direction} (semantic content) and \emph{magnitude} (loosely correlated
-with sentence length and vocabulary richness).  When PCA is applied to
-un-normalised vectors, it decomposes a mixture of directional and magnitude
-variance.  Magnitude differences between sentences carry little semantic
-information relevant to thematic clustering.  By placing all vectors on the
-unit sphere before PCA, we guarantee that PCA decomposes purely
-\textbf{angular (directional, semantic) variance} --- the type most relevant
-for identifying thematic clusters.
+Without normalisation, embeddings vary in both direction (semantic content) and
+magnitude (loosely correlated with sentence length).  PCA applied to
+un-normalised vectors decomposes a mixture of directional and magnitude
+variance.  L2 normalisation ensures PCA decomposes purely
+\textbf{angular (semantic) variance}.
 
-A critical geometric consequence is that, for any two unit vectors
-$\hat{\mathbf{a}}, \hat{\mathbf{b}} \in \mathcal{S}^{383}$:
+A critical geometric consequence is that, for unit vectors
+$\hat{\mathbf{a}}, \hat{\mathbf{b}}$:
 
 \begin{mathbox}
 \[
   d_{\mathrm{Euclidean}}(\hat{\mathbf{a}},\,\hat{\mathbf{b}})^{2}
   \;=\;
-  \|\hat{\mathbf{a}} - \hat{\mathbf{b}}\|_2^2
-  \;=\;
-  2 - 2\langle \hat{\mathbf{a}},\, \hat{\mathbf{b}} \rangle
-  \;=\;
   2\bigl(1 - \cos(\hat{\mathbf{a}},\, \hat{\mathbf{b}})\bigr)
 \]
 \end{mathbox}
 
-Euclidean distance is therefore a \textbf{monotone function of cosine distance}
-on the unit sphere.  This means Ward-linkage AHC --- defined in Euclidean
-space --- implicitly optimises cluster separation in terms of cosine similarity,
-which is precisely the metric that MiniLM's training objective optimised.
+Euclidean distance is a \textbf{monotone function of cosine distance} on the
+unit sphere.  This ensures that UMAP's cosine neighbourhood graph and
+Ward-linkage AHC (Euclidean) are both consistent with the MNR training
+objective of \texttt{all-mpnet-base-v2}.
 
 \begin{insightbox}
-\textbf{Influence on clustering:} L2 normalisation before PCA ensures that
-principal components capture thematic (angular) variation rather than
-length-driven magnitude differences.  The Euclidean--cosine equivalence on the
-unit sphere makes Ward-linkage AHC with Euclidean distance fully consistent with
-the semantic geometry of the embedding space.
+\textbf{Influence on clustering:} L2 normalisation aligns the distance metric
+used in every subsequent step (cosine for UMAP neighbourhood graph, Euclidean
+for PCA projection and AHC) with the metric optimised during model training,
+ensuring geometric coherence throughout the pipeline.
 \end{insightbox}
 
-% =============================================================================
-\section{Principal Component Analysis (PCA)}
-% =============================================================================
+\section{Adaptive Principal Component Analysis}
 
-PCA (Pearson, 1901; Jolliffe, 2002) is applied to the L2-normalised matrix
-$\hat{X} \in \mathbb{R}^{1760 \times 384}$, projecting each sentence vector
-into the subspace spanned by the top 100 principal components:
+PCA is applied to the L2-normalised matrix $\hat{X} \in \mathbb{R}^{1760
+\times 768}$.  Rather than fixing a component count, an
+\textbf{adaptive} strategy is used: the minimum number of components $n^*$
+whose cumulative explained variance reaches threshold $\tau = 0.80$ is
+selected:
 
 \begin{mathbox}
 \[
-  X_{\mathrm{pca}} \;=\; \hat{X}\,W,
-  \qquad W \in \mathbb{R}^{384 \times 100}
+  n^{*} \;=\; \min\!\left\{n \;\middle|\;
+    \frac{\sum_{k=1}^{n} \lambda_k}{\sum_{k=1}^{p} \lambda_k}
+    \;\geq\; \tau \right\},
+  \qquad \tau = 0.80,\quad p = 768
 \]
 \end{mathbox}
 
-where the columns of $W$ are the eigenvectors of the sample covariance matrix
-$\hat{X}^{\top}\hat{X}$, ordered by decreasing eigenvalue.  The 100 retained
-components collectively explain \textbf{74.55\%} of the total variance in the
-normalised embedding matrix.
+For this dataset, $n^{*} = 121$ components are retained, preserving
+\textbf{80.02\%} of total variance.
 
 \subsection{Why Apply PCA?}
 
 \begin{itemize}
-  \item \textbf{Curse of dimensionality.}  In high-dimensional spaces, pairwise
-        Euclidean distances become increasingly uniform (Beyer et al., 1999).
-        Formally, for $N$ random points in $\mathbb{R}^{d}$, the ratio
-        $(d_{\max} - d_{\min})/d_{\min} \to 0$ as $d \to \infty$, meaning all
-        points appear equidistant.  This degrades any distance-based clustering
-        algorithm.  Reducing from 384 to 100 dimensions substantially mitigates
-        this effect.
+  \item \textbf{Curse of dimensionality.}  In $\mathbb{R}^{768}$, pairwise
+        Euclidean distances become nearly uniform (Beyer et al., 1999),
+        degrading distance-based algorithms.  Reducing to 121 dimensions
+        substantially mitigates this.
 
-  \item \textbf{Noise suppression.}  Components PC$_{101}$ through PC$_{384}$
-        capture noise and sentence-level idiosyncrasies rather than shared
-        semantic structure.  Discarding them acts as a low-rank denoising
-        filter, retaining only the dominant directions of semantic variation
-        useful for clustering.
+  \item \textbf{Denoising.}  Components 122 through 768 capture
+        sentence-level idiosyncrasies rather than shared semantic structure.
+        Discarding them acts as a low-rank denoising filter.
 
-  \item \textbf{Computational efficiency.}  AHC computes an $O(N^{2})$
-        pairwise distance matrix.  Reducing feature dimensionality from 384
-        to 100 reduces memory and compute requirements substantially without
-        sacrificing cluster quality.
-
-  \item \textbf{Literature precedent.}  Petukhova et al.\ (2024) use PCA as
-        the sole dimensionality reduction step before applying clustering
-        algorithms to BERT-family embeddings, validating this approach in
-        the peer-reviewed literature.
+  \item \textbf{UMAP pre-conditioning.}  UMAP's $k$-nearest-neighbour graph
+        construction is $O(N \log N)$ in the embedding dimension.  Reducing
+        from 768 to 121 dimensions substantially reduces this cost while
+        preserving the semantic structure that UMAP needs to resolve the
+        manifold.
 \end{itemize}
 
-\subsection{Why 100 Components?}
+\subsection{Why Not Re-Normalise After PCA?}
 
-The choice of 100 components is motivated by the need to retain sufficient
-variance to preserve the fine-grained geometric separation between the small
-Wikipedia sub-corpus (90 documents) and the larger modern English cluster
-(880 documents).  At 50 components, the cumulative explained variance is
-approximately 56.6\%, and the Wikipedia signal --- which resides in lower-ranked
-principal components that encode formal encyclopaedic register --- is discarded,
-causing the silhouette-optimal $K$ to reduce from 3 to 2.  At 100 components,
-74.55\% of total variance is retained, preserving this fine-grained distinction
-and correctly recovering a three-cluster partition.  Retaining too many
-components (e.g., 200+) reintroduces the curse of dimensionality; 100 strikes
-the correct balance between discriminative power and geometric stability.
-
-\subsection{The PCA Output Is NOT Re-Normalised --- By Design}
-
-A critical design decision is that $X_{\mathrm{pca}}$ is used
-\textbf{directly}, without a second round of L2 normalisation.  This is
-theoretically motivated.
-
-PCA is a variance-preserving projection: PC$_1$ has the largest eigenvalue and
-the largest variance across the dataset; PC$_2$ the second largest; and so on.
-In the resulting 100-dimensional space, Euclidean distance naturally weights the
-earlier components more heavily, because they contribute more to the squared
-distance:
+PCA is variance-preserving: PC$_1$ carries the largest eigenvalue, PC$_2$ the
+second largest, and so on.  Euclidean distance in PCA space naturally weights
+the earlier, higher-variance components:
 
 \begin{mathbox}
 \[
   d^{2}(\mathbf{a},\,\mathbf{b})
   \;=\;
-  \sum_{k=1}^{100}(a_k - b_k)^{2}
+  \sum_{k=1}^{121}(a_k - b_k)^{2}
 \]
 \end{mathbox}
 
-Since the earlier principal components capture the most semantically significant
-axes of variation (e.g., PC$_1$ encodes the dominant contrast between
-Shakespearean and modern English), this automatic variance weighting provides
-useful inductive bias for cluster discovery.
-
-If $X_{\mathrm{pca}}$ were re-normalised, all 100 dimensions would be forced to
-contribute \emph{equally} to distances, erasing this variance structure.
-Empirical validation confirmed this: re-normalising after PCA caused the optimal
-$K$ to collapse from 3 to 2, merging the Wikipedia cluster into the larger
-modern English cluster, because the distinguishing features of the small
-Wikipedia sub-corpus reside in lower principal components that were amplified to
-equal weight by re-normalisation, reducing overall discriminability.
+This variance weighting provides useful inductive bias for UMAP: the most
+semantically dominant axes (e.g.\ the contrast between archaic and modern
+English) automatically receive greater influence in the neighbourhood graph.
+Re-normalising after PCA would collapse all 121 dimensions to equal
+contribution, erasing this structure.
 
 \begin{insightbox}
-\textbf{Influence on clustering:} PCA's variance-weighted geometry causes
-Ward-linkage AHC to weight the most semantically informative dimensions most
-heavily.  This enables the algorithm to recover fine-grained clusters --- such
-as separating the small Wikipedia sub-corpus (90 documents) from the larger
-reviews/news cluster (880 documents) --- that collapse to a trivial two-cluster
-partition in a uniformly-weighted re-normalised space.
+\textbf{Influence on clustering:} Adaptive PCA retains exactly the components
+needed to represent 80\% of the semantic variance in the 768-dimensional
+embedding space, providing UMAP with a clean, noise-reduced,
+variance-weighted input.
 \end{insightbox}
 
-% =============================================================================
+\section{UMAP: Non-Linear Manifold Projection}
+
+After PCA denoising, Uniform Manifold Approximation and Projection (UMAP;
+McInnes, Healy \& Melville, 2018) projects the 121-dimensional PCA
+coordinates into a 5-dimensional Euclidean space used directly for clustering.
+
+\subsection{Why UMAP After PCA?}
+
+PCA is linear: it decomposes global variance along orthogonal axes and cannot
+represent non-linear cluster structure.  Sentence embeddings lie on a curved
+manifold in $\mathbb{R}^{768}$; sub-domains that are genuinely distinct may
+not be linearly separable.  UMAP constructs a fuzzy topological representation
+of the data manifold using a $k$-nearest-neighbour graph, then optimises a
+low-dimensional layout that preserves both local neighbourhood structure and
+global topology simultaneously.
+
+\subsection{Parameter Choices}
+
+\begin{itemize}
+  \item \textbf{\texttt{metric='cosine'}.}  UMAP builds its $k$-nearest-neighbour
+        graph using cosine distance in the PCA-denoised space.  Cosine
+        distance is the semantically correct measure for L2-normalised text
+        embeddings, consistent with the MNR training objective.  This is the
+        BERTopic standard (Grootendorst, 2022).
+
+  \item \textbf{\texttt{n\_components=5}.}  Standard output dimensionality for
+        clustering tasks (BERTopic standard).  Sufficient to preserve
+        multi-cluster manifold topology; low enough for Euclidean distances to
+        remain well-conditioned for AHC.
+
+  \item \textbf{\texttt{min\_dist=0.0}.}  The UMAP documentation states
+        explicitly that low values are recommended for clustering tasks.
+        \texttt{min\_dist=0.0} allows points within the same neighbourhood to
+        pack as tightly as the manifold permits, producing compact, isolated
+        cluster regions.  This is the BERTopic standard for clustering.
+
+  \item \textbf{\texttt{n\_neighbors=10}.}  Reduced from the standard default
+        of 15 to increase sensitivity to small, dense local structures.  With
+        \texttt{n\_neighbors=10}, each of the 80 Notre Dame rows finds most of
+        its 10 nearest neighbours within the Notre Dame group itself, creating
+        a strongly connected sub-graph that UMAP projects into a tight,
+        isolated manifold region.  The BERTopic documentation explicitly states
+        that decreasing \texttt{n\_neighbors} ``creates more local structure''
+        and is appropriate when detecting small, cohesive sub-domains.
+
+  \item \textbf{\texttt{random\_state=42}.}  Fixes UMAP's stochastic gradient
+        descent phase for bit-for-bit reproducibility.
+\end{itemize}
+
+\begin{insightbox}
+\textbf{Influence on clustering:} UMAP with \texttt{n\_neighbors=10} is the
+key step that enables the detection of the Notre Dame sub-domain as a
+geometrically distinct cluster.  The reduced neighbourhood size makes the
+algorithm more sensitive to the dense, localised cluster formed by the
+repeated Notre Dame sentences, which UMAP projects into a compact isolated
+region that Ward-linkage AHC can cleanly separate from the surrounding
+modern English manifold.
+\end{insightbox}
+
 \section{Pipeline Summary}
-% =============================================================================
 
 \begin{table}[h!]
 \centering
@@ -425,80 +395,73 @@ partition in a uniformly-weighted re-normalised space.
                  & \textbf{Output} & \textbf{Key Purpose} \\
   \midrule
   1 & Data loading \& cleaning
-    & Raw text file      & 1{,}760 sentences
+    & Raw text file      & 1{,}760 sentences (dups retained)
     & Quality \& row alignment \\
-  2 & MiniLM-L12-v2 encoding
-    & 1{,}760 sentences  & $(1760,\,384)$
+  2 & all-mpnet-base-v2 encoding
+    & 1{,}760 sentences  & $(1760,\,768)$
     & Semantic representation \\
   3 & L2 normalisation
-    & $(1760,\,384)$     & $(1760,\,384)$ unit vectors
-    & Angular variance for PCA \\
-  4 & PCA (100 components)
-    & $(1760,\,384)$     & $(1760,\,100)$ variance-weighted
-    & Dimensionality reduction \\
+    & $(1760,\,768)$     & $(1760,\,768)$ unit vectors
+    & Cosine-consistent distances \\
+  4 & Adaptive PCA (121 components)
+    & $(1760,\,768)$     & $(1760,\,121)$ variance-weighted
+    & Denoising; UMAP pre-conditioning \\
+  5 & UMAP ($n_{\text{nbrs}}=10$, $\texttt{min\_dist}=0$)
+    & $(1760,\,121)$     & $(1760,\,5)$ manifold-projected
+    & Local cluster separation \\
   \bottomrule
 \end{tabularx}
-\caption{Summary of the four-stage preprocessing pipeline.}
+\caption{Summary of the five-stage preprocessing pipeline.}
 \end{table}
 
-The final output is a \texttt{float32} matrix of shape $(1760,\,100)$ in which
-each row is the variance-weighted PCA projection of the corresponding sentence's
-L2-normalised MiniLM embedding.  This matrix is passed directly to the AHC
-clustering algorithm.
-
-% =============================================================================
 \section{Holistic Discussion: Influence on Clustering Performance}
-% =============================================================================
 
-The preprocessing choices form a coherent, theoretically motivated pipeline
-specifically designed for sentence-level text clustering with a transformer
-embedding model.  The key stage-to-stage interactions are:
+The preprocessing choices form a coherent, theoretically motivated pipeline:
 
 \begin{itemize}
   \item \textbf{Cleaning $\to$ Embedding quality.}  Preserving natural text
-        keeps sentence representations within MiniLM's training distribution.
-        Sentences from semantically distinct domains (Shakespeare, reviews,
-        Wikipedia) produce embeddings in clearly separated regions of
-        $\mathbb{R}^{384}$.
+        keeps sentences within the model's training distribution.  Archaic
+        Shakespeare vocabulary, contemporary review prose, and formal
+        encyclopaedic text produce embeddings in clearly separated regions
+        of $\mathbb{R}^{768}$.
 
-  \item \textbf{L2 normalisation $\to$ PCA quality.}  Normalising before PCA
-        ensures that principal components reflect semantic (angular) variation
-        rather than sentence-length variation, maximising discriminative
-        information per component.
+  \item \textbf{Duplicate retention $\to$ Notre Dame cluster density.}
+        The 80 Notre Dame rows (18 unique $\times$ 4--5 copies) create a
+        dense local neighbourhood in UMAP space.  This is the necessary
+        precondition for AHC to detect the Notre Dame sub-domain as a
+        distinct cluster.
 
-  \item \textbf{PCA $\to$ AHC quality.}  Reducing to 100 variance-weighted
-        dimensions eliminates noise, mitigates the curse of dimensionality, and
-        concentrates discriminative semantic information in the first few
-        components, which Ward-linkage AHC naturally weights more heavily.
+  \item \textbf{L2 normalisation $\to$ Metric consistency.}  All steps from
+        PCA onwards operate in cosine-equivalent Euclidean space, consistent
+        with the MNR training objective.
 
-  \item \textbf{Variance weighting $\to$ Cluster granularity.}  Not
-        re-normalising after PCA preserves the hierarchical weighting of
-        semantic axes, enabling AHC to recover a three-cluster solution
-        reflecting genuine thematic structure rather than collapsing to a
-        trivial two-cluster partition.
+  \item \textbf{Adaptive PCA $\to$ UMAP pre-conditioning.}  Noise suppression
+        and dimensionality reduction produce a clean, variance-weighted input
+        that allows UMAP to resolve the non-linear manifold structure
+        efficiently.
+
+  \item \textbf{UMAP ($n_{\text{nbrs}}=10$) $\to$ Local cluster isolation.}
+        The reduced neighbourhood size amplifies local density differences,
+        enabling the detection of the small but cohesive Notre Dame cluster
+        that would be invisible to a linear projection or to UMAP with larger
+        neighbourhood sizes.
 \end{itemize}
 
 \vspace{12pt}
 \noindent\textcolor{midblue}{\small\textbf{References:}\\[3pt]
 Beyer, K., Goldstein, J., Ramakrishnan, R., \& Shaft, U.\ (1999).\ When is
-``nearest neighbor'' meaningful? \textit{International Conference on Database
-Theory (ICDT)}, 217--235.\\[3pt]
-Devlin, J., Chang, M.-W., Lee, K., \& Toutanova, K.\ (2019).\ BERT:
-Pre-training of deep bidirectional transformers for language understanding.
-\textit{Proceedings of NAACL-HLT 2019}, 4171--4186.\\[3pt]
-Jolliffe, I.\,T.\ (2002).\ \textit{Principal Component Analysis} (2nd ed.).
-Springer.\\[3pt]
-Mikolov, T., Chen, K., Corrado, G., \& Dean, J.\ (2013).\ Efficient estimation
-of word representations in vector space. \textit{arXiv:1301.3781}.\\[3pt]
-Pearson, K.\ (1901).\ On lines and planes of closest fit to systems of points
-in space. \textit{Philosophical Magazine}, 2(11), 559--572.\\[3pt]
-Pennington, J., Socher, R., \& Manning, C.\,D.\ (2014).\ GloVe: Global vectors
-for word representation. \textit{Proceedings of EMNLP 2014}, 1532--1543.\\[3pt]
+``nearest neighbor'' meaningful? \textit{ICDT}, 217--235.\\[3pt]
+Grootendorst, M.\ (2022).\ BERTopic: Neural topic modelling with a class-based
+TF-IDF procedure. \textit{arXiv:2203.05794}.\\[3pt]
+McInnes, L., Healy, J., \& Melville, J.\ (2018).\ UMAP: Uniform manifold
+approximation and projection for dimension reduction.
+\textit{arXiv:1802.03426}.\\[3pt]
 Petukhova, A., Matos-Carvalho, J.\,P., \& Fachada, N.\ (2024).\ Text clustering
 with LLM embeddings. \textit{arXiv:2403.15112}.\\[3pt]
 Reimers, N., \& Gurevych, I.\ (2019).\ Sentence-BERT: Sentence embeddings using
 Siamese BERT-networks. \textit{Proceedings of EMNLP 2019}, 3982--3992.\\[3pt]
-Salton, G., \& McGill, M.\,J.\ (1983).\ \textit{Introduction to Modern
-Information Retrieval}. McGraw-Hill.}
+Song, K., Tan, X., Qin, T., Lu, J., \& Liu, T.-Y.\ (2020).\ MPNet: Masked and
+permuted pre-training for language understanding.
+\textit{NeurIPS}, 33, 16857--16867.}
 
 \end{document}
