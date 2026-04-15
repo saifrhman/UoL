@@ -386,29 +386,23 @@ modern English manifold.
 
 \section{Pipeline Summary}
 
-\begin{table}[h!]
+\begin{table}[ht] % Use [H] if you have the 'float' package and want it EXACTLY here
 \centering
-\renewcommand{\arraystretch}{1.35}
-\begin{tabularx}{\textwidth}{c l l l X}
+\renewcommand{\arraystretch}{1.5} % Increased slightly for readability
+\begin{tabularx}{\textwidth}{@{} c l l X X @{}}
   \toprule
   \textbf{Stage} & \textbf{Operation} & \textbf{Input}
                  & \textbf{Output} & \textbf{Key Purpose} \\
   \midrule
-  1 & Data loading \& cleaning
-    & Raw text file      & 1{,}760 sentences (dups retained)
-    & Quality \& row alignment \\
-  2 & all-mpnet-base-v2 encoding
-    & 1{,}760 sentences  & $(1760,\,768)$
-    & Semantic representation \\
-  3 & L2 normalisation
-    & $(1760,\,768)$     & $(1760,\,768)$ unit vectors
-    & Cosine-consistent distances \\
-  4 & Adaptive PCA (121 components)
-    & $(1760,\,768)$     & $(1760,\,121)$ variance-weighted
-    & Denoising; UMAP pre-conditioning \\
-  5 & UMAP ($n_{\text{nbrs}}=10$, $\texttt{min\_dist}=0$)
-    & $(1760,\,121)$     & $(1760,\,5)$ manifold-projected
-    & Local cluster separation \\
+  1 & Data loading & Raw text file & 1,760 sentences (dups retained) & Quality \& row alignment \\
+  \addlinespace
+  2 & all-mpnet-base-v2 & 1,760 sentences & $(1760, 768)$ & Semantic representation \\
+  \addlinespace
+  3 & L2 normalisation & $(1760, 768)$ & $(1760, 768)$ unit vectors & Cosine-consistent distances \\
+  \addlinespace
+  4 & Adaptive PCA & $(1760, 768)$ & $(1760, 121)$ variance-weighted & Denoising; UMAP pre-conditioning \\
+  \addlinespace
+  5 & UMAP & $(1760, 121)$ & $(1760, 5)$ manifold-projected & Local cluster separation \\
   \bottomrule
 \end{tabularx}
 \caption{Summary of the five-stage preprocessing pipeline.}
