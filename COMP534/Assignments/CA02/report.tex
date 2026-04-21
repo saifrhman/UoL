@@ -1,0 +1,284 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---- Packages ----
+\usepackage[margin=2.0cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage{times}
+\usepackage{microtype}
+\usepackage{float}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{parskip}
+\usepackage{multicol}
+
+\setlength{\parskip}{4pt plus 1pt minus 1pt}
+\setlength{\parindent}{0pt}
+
+\title{\textbf{COMP534 Assignment~2: 3 Class Lung X-Ray Classification}\\[4pt]
+\large Normal / Opacity / Pneumonia}
+\author{Ainur Smailova, Nattanan Sottivorakun, Laura Valentina Sierra Pena, Saif Ur Rehman}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-8mm}
+
+% ==================================================================
+% SECTION 1 — EXPERIMENTAL PROTOCOL  (Rubric: 5 marks)
+% ==================================================================
+\section{Experimental Protocol}
+
+The dataset contains 3{,}475 chest X-ray images ($299\!\times\!299$\,px) across three classes: Normal (1{,}250, 36.0\%), Opacity (1{,}125, 32.4\%), and Pneumonia (1{,}100, 31.7\%), yielding a mild imbalance ratio of 1.14:1.
+
+A \textbf{stratified 80/20 hold-out} split (\texttt{random\_state=42}) partitions the data into a training pool (2{,}780 images) and a test set (695 images) that is \emph{locked immediately and never accessed until final evaluation}. Stratification preserves class proportions in both splits, preventing near-zero minority representation in small partitions~\cite{raschka2018}. On the 80\% training pool, \textbf{stratified 5-fold cross-validation} produces five train/validation partitions ($\sim$2{,}224 / $\sim$556 per fold), providing a low-variance generalisation estimate critical for only 3{,}475 images. Model selection uses \textbf{mean validation macro-F1} across folds---not accuracy, which is misleading under class imbalance as it is dominated by the majority class~\cite{sokolova2009}. The best configuration is retrained on the full 80\% pool and evaluated \emph{once} on the locked test set~\cite{hastie2009}. All random number generators (Python, NumPy, PyTorch, CUDA) are seeded at 42 with \texttt{cudnn.deterministic=True} for full reproducibility.
+
+% ==================================================================
+% SECTION 2 — DATALOADER  (Rubric: 12 marks)
+% ==================================================================
+\section{Data Loading, Preprocessing, and Augmentation}
+
+\subsection{Deterministic Preprocessing (All Splits)}
+
+All images undergo three fixed operations via Albumentations (Figure~\ref{fig:aug}). First, \textbf{Resize}$(300\!\times\!300)$ matches EfficientNet-B3's native resolution~\cite{tan2019}, incurring negligible distortion from the 299$\to$300\,px adjustment. Second, \textbf{CLAHE} (Contrast Limited Adaptive Histogram Equalisation, \texttt{clip\_limit=2.0}, $8\!\times\!8$ tiles) enhances local contrast on non-overlapping tiles independently, revealing subtle pulmonary opacities masked by the wide global dynamic range of X-ray imaging---standard since CheXNet~\cite{rajpurkar2017} and validated in recent benchmarks achieving macro-AUC 0.906 on NIH ChestX-ray14~\cite{sawah2026}. Critically, CLAHE operates on \texttt{uint8} intensities \emph{before} normalisation. Third, \textbf{Normalize} applies ImageNet channel-wise statistics ($\mu$=[0.485, 0.456, 0.406], $\sigma$=[0.229, 0.224, 0.225]), mandatory for pretrained weights.
+
+\subsection{Stochastic Augmentation (Training Only)}
+
+Five augmentations model clinically realistic variability: \textbf{HorizontalFlip}$(p\!=\!0.5)$ exploits bilateral lung symmetry (vertical flip is \emph{prohibited}---anatomically non-physiological); \textbf{Rotate}$(\pm10°, p\!=\!0.5)$ models patient-positioning variance~\cite{castro2020}; \textbf{RandomBrightnessContrast}$(\pm0.2, p\!=\!0.5)$ simulates X-ray exposure variability across scanners; \textbf{ElasticTransform}$(\alpha\!=\!1, \sigma\!=\!50, p\!=\!0.3)$ models soft-tissue deformation~\cite{garcea2023}; \textbf{GaussNoise}$(var\!\in\![10,50], p\!=\!0.3)$ simulates low-dose scanner noise.
+
+\subsection{Batch-Level Augmentation}
+
+\textbf{MixUp}~\cite{zhang2018} ($\alpha\!=\!0.2$) and \textbf{CutMix}~\cite{yun2019} ($\alpha\!=\!1.0$, validated as optimal for medical images~\cite{mediau2025}) are alternated randomly ($p\!=\!0.5$) per batch. MixUp interpolates images and labels ($\tilde{x} = \lambda x_i + (1\!-\!\lambda) x_j$), smoothing decision boundaries. CutMix pastes rectangular patches between images, forcing recognition from partial views---critical for localised opacity detection. On mixed batches, \texttt{label\_smoothing=0.0} (MixUp already produces soft labels; combining causes over-regularisation). On unmixed batches, $\varepsilon\!=\!0.1$~\cite{szegedy2016}.
+
+\subsection{Class Imbalance Handling}
+
+\textbf{WeightedRandomSampler} (WRS) assigns each sample weight $w_i = 1/\text{count}(\text{class}_i)$ with \texttt{replacement=True}, ensuring approximately equal class representation per batch. Unlike class-weighted loss (which rescales gradient magnitudes but leaves AdamW's moment-estimate covariance dominated by majority-class features), WRS balances gradient covariance in both magnitude and sample diversity~\cite{buda2018}. WRS is rebuilt \emph{per fold} from fold-local labels to prevent data leakage. Loss weights are \emph{not} added to \texttt{CrossEntropyLoss} to avoid double-correction. Training DataLoaders use \texttt{drop\_last=True} to stabilise BatchNorm statistics.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{augmentation.png}
+  \caption{Preprocessing pipeline: Raw $\to$ Resize+CLAHE $\to$ stochastic augmentation (three random variants per class).}
+  \label{fig:aug}
+\end{figure}
+
+% ==================================================================
+% SECTION 3 — NETWORKS, STRATEGIES, COMPONENTS  (Rubric: 13 marks)
+% ==================================================================
+\section{Network Architectures, Strategies, and Training}
+
+\subsection{Custom CNN: LightXRayCNN ($\sim$1.2M parameters)}
+
+The custom network employs \textbf{depthwise-separable convolutions}~\cite{howard2017}: a standard $3\!\times\!3$ convolution ($C_\text{in}\!\times\!C_\text{out}\!\times\!9$ params) is factored into a depthwise filter ($C_\text{in}\!\times\!9$) followed by a pointwise $1\!\times\!1$ filter ($C_\text{in}\!\times\!C_\text{out}$), yielding $\sim$8.9$\times$ fewer parameters. Architecture: stride-2 stem ($3\!\to\!32$), four DWSep blocks expanding to 256 channels with MaxPool, global average pooling (GAP)~\cite{lin2013}, and Dropout(0.5) + Linear(256, 3). GELU activation~\cite{hendrycks2016} provides smoother gradient flow than ReLU. GAP eliminates FC layers, providing parameter reduction and implicit spatial regularisation.
+
+\subsection{Existing CNN: EfficientNet-B3}
+
+EfficientNet-B3~\cite{tan2019} applies compound scaling---jointly increasing depth, width, and resolution---more principled than scaling one dimension alone. Its native $300\!\times\!300$ input matches preprocessing exactly. Feature dimension is 1536, with $\sim$12M total parameters. Three training strategies are evaluated:
+
+\begin{itemize}
+    \item \textbf{Scratch}: Random initialisation, all parameters trainable, LR $10^{-3}$.
+    \item \textbf{Feature extraction}: ImageNet backbone frozen; only head trains (LR $10^{-3}$).
+    \item \textbf{Fine-tuning}: Early blocks (\texttt{features[0:5]}) frozen; upper backbone LR $10^{-4}$, head LR $10^{-3}$---differential learning rates \cite{howard2018} prevent catastrophic forgetting while enabling domain adaptation.
+\end{itemize}
+
+\subsection{Training Components}
+
+\textbf{Loss}: CrossEntropyLoss with conditional label smoothing. \textbf{Optimiser}: AdamW~\cite{loshchilov2019} with decoupled weight decay $10^{-4}$. \textbf{Gradient clipping}: $\|\nabla\|_\text{max}\!=\!1.0$, stabilising fine-tuning~\cite{pascanu2013}. \textbf{Scheduler}: CosineAnnealingLR ($T_\text{max}\!=\!20$, $\eta_\text{min}\!=\!10^{-6}$). \textbf{Early stopping}: patience 10 on validation loss, restoring best checkpoint.
+
+% ==================================================================
+% SECTION 4 — RESULTS TABLE  (Rubric: 5 marks)
+% ==================================================================
+\section{Cross-Validation Results}
+
+\begin{table}[H]
+\centering
+\caption{5-fold CV results. Best model selected by highest mean validation macro-F1.}
+\label{tab:cv}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Configuration} & \textbf{Mean Val Macro-F1} & \textbf{Std} & \textbf{Per-fold F1} \\
+\midrule
+LightXRayCNN (scratch)            & 0.8686 & 0.0071 & .869 \ .867 \ .881 \ .867 \ .859 \\
+EfficientNet-B3 (feat.\ extract)  & 0.8812 & 0.0045 & .880 \ .879 \ .879 \ .890 \ .877 \\
+\textbf{EfficientNet-B3 (fine-tune)} & \textbf{0.9362} & \textbf{0.0082} & \textbf{.931 \ .931 \ .950 \ .940 \ .927} \\
+EfficientNet-B3 (scratch)         & 0.9041 & 0.0021 & .901 \ .906 \ .902 \ .906 \ .904 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{EfficientNet-B3 (fine-tune)} achieves the highest mean validation macro-F1 of 0.9362, confirming that differential-LR fine-tuning effectively adapts pretrained ImageNet features to the medical domain. Feature extraction is limited by its frozen backbone ceiling (0.8812). Scratch EfficientNet (0.9041) outperforms the custom CNN (0.8686) but underperforms fine-tuning, confirming that pretrained initialisation is critical for $\sim$3{,}500 images. The custom LightXRayCNN achieves respectable 0.8686 with only $\sim$1.2M parameters---competitive given it trains from scratch.
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{loss_light.png}
+    \caption{LightXRayCNN — Loss}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{acc_light.png}
+    \caption{LightXRayCNN — Accuracy}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{loss_feat.png}
+    \caption{Eff-B3 Feature Extract — Loss}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{acc_feat.png}
+    \caption{Eff-B3 Feature Extract — Accuracy}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{loss_fine.png}
+    \caption{Eff-B3 Fine-Tune — Loss}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{acc_fine.png}
+    \caption{Eff-B3 Fine-Tune — Accuracy}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{loss_scratch.png}
+    \caption{Eff-B3 Scratch — Loss}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.48\textwidth}
+    \includegraphics[width=\textwidth]{acc_scratch.png}
+    \caption{Eff-B3 Scratch — Accuracy}
+  \end{subfigure}
+  \caption{Separate loss and accuracy plots per epoch for all models and strategies (5-fold CV, mean curves in black).}
+  \label{fig:curves}
+\end{figure}
+
+% ==================================================================
+% SECTION 5 — FINAL EVALUATION  (Rubric: 5 marks)
+% ==================================================================
+\section{Final Test-Set Evaluation}
+
+The best model (EfficientNet-B3, fine-tune) was retrained on the full 80\% training pool (2{,}502 train / 278 internal holdout for early stopping) and evaluated \emph{once} on the locked test set using \textbf{test-time augmentation} (TTA): five inference passes (original, horizontal flip, $\pm5°$ rotation, mild brightness shift) with softmax probabilities averaged before argmax~\cite{shiri2024}.
+
+\begin{table}[H]
+\centering
+\caption{Test-set metrics. Three primary metrics capture genuinely different performance aspects.}
+\label{tab:test}
+\begin{tabular}{@{}llp{6.2cm}@{}}
+\toprule
+\textbf{Metric} & \textbf{Value} & \textbf{Aspect Captured} \\
+\midrule
+Macro-F1         & 0.9478 & Classification quality (equal class weight) \\
+Cohen's $\kappa$ & 0.9200 & Agreement beyond chance (immune to class-frequency bias) \\
+Macro AUC-ROC    & 0.9854 & Ranking \& calibration quality (threshold-free) \\
+\midrule
+Accuracy (ref.)  & 0.9468 & Overall correctness (majority-class dominated) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Per-class precision, recall, and F1-score on the test set.}
+\label{tab:perclass}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-score} & \textbf{Support} \\
+\midrule
+Normal    & 0.9112 & 0.9440 & 0.9273 & 250 \\
+Opacity   & 0.9444 & 0.9067 & 0.9252 & 225 \\
+Pneumonia & 0.9909 & 0.9909 & 0.9909 & 220 \\
+\midrule
+Macro avg & 0.9489 & 0.9472 & 0.9478 & 695 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Macro-F1 (0.9478) provides balanced classification quality across all three classes. Cohen's $\kappa$ (0.9200) confirms performance far above chance---a majority-class predictor achieves $\kappa \approx 0$. AUC-ROC (0.9854) evaluates ranking quality from raw softmax probabilities, orthogonal to hard-prediction metrics. Pneumonia achieves near-perfect F1 (0.9909), while Normal--Opacity confusion is the primary error source, reflecting their clinical similarity. Only 2 of 220 Pneumonia cases (0.9\%) were misclassified as Normal---critical clinically as this represents a missed diagnosis.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{confusion_matrix.png}
+  \caption{Test-set confusion matrices: raw counts (left) and row-normalised per-class recall (right). Pneumonia$\to$Normal errors (missed diagnoses): only 2/220 (0.9\%).}
+  \label{fig:cm}
+\end{figure}
+
+\textbf{Grad-CAM}~\cite{selvaraju2017} visualisations (Figure~\ref{fig:gradcam}) applied to the final convolutional layer confirm that activations concentrate on lung parenchyma: diffuse patterns for Opacity, focal consolidation for Pneumonia, and weak/distributed activation for Normal---validating the classifier learns genuine pathological features rather than dataset artifacts.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{gradcam.png}
+  \caption{Grad-CAM heatmaps on test samples. Activations correctly localise to lung fields, confirming clinically valid learned representations.}
+  \label{fig:gradcam}
+\end{figure}
+
+% ==================================================================
+% REFERENCES
+% ==================================================================
+\begingroup
+\footnotesize
+\begin{thebibliography}{20}
+
+\bibitem{raschka2018}
+S.~Raschka, ``Model evaluation, model selection, and algorithm selection in machine learning,'' \emph{arXiv:1811.12808}, 2018.
+
+\bibitem{sokolova2009}
+M.~Sokolova and G.~Lapalme, ``A systematic analysis of performance measures for classification tasks,'' \emph{Inf.\ Process.\ Manag.}, vol.~45, no.~4, pp.~427--437, 2009.
+
+\bibitem{hastie2009}
+T.~Hastie, R.~Tibshirani, and J.~Friedman, \emph{The Elements of Statistical Learning}, 2nd~ed.\@ Springer, 2009, ch.~7.
+
+\bibitem{tan2019}
+M.~Tan and Q.~Le, ``EfficientNet: Rethinking model scaling for convolutional neural networks,'' in \emph{NeurIPS}, 2019.
+
+\bibitem{rajpurkar2017}
+P.~Rajpurkar \emph{et~al.}, ``CheXNet: Radiologist-level pneumonia detection on chest X-rays with deep learning,'' \emph{arXiv:1711.05225}, 2017.
+
+\bibitem{sawah2026}
+M.~S.~Sawah \emph{et~al.}, ``An optimized EfficientNetB0 framework with CLAHE-based preprocessing for accurate multi-class chest X-ray classification,'' \emph{Sci.\ Rep.}, vol.~16, 10811, 2026.
+
+\bibitem{howard2017}
+A.~G.~Howard \emph{et~al.}, ``MobileNets: Efficient convolutional neural networks for mobile vision applications,'' \emph{arXiv:1704.04861}, 2017.
+
+\bibitem{hendrycks2016}
+D.~Hendrycks and K.~Gimpel, ``Gaussian error linear units (GELUs),'' \emph{arXiv:1606.08415}, 2016.
+
+\bibitem{lin2013}
+M.~Lin, Q.~Chen, and S.~Yan, ``Network in network,'' \emph{arXiv:1312.4400}, 2013.
+
+\bibitem{howard2018}
+J.~Howard and S.~Ruder, ``Universal language model fine-tuning for text classification,'' in \emph{ACL}, 2018.
+
+\bibitem{zhang2018}
+H.~Zhang \emph{et~al.}, ``mixup: Beyond empirical risk minimization,'' in \emph{ICLR}, 2018.
+
+\bibitem{yun2019}
+S.~Yun \emph{et~al.}, ``CutMix: Regularization strategy to train strong classifiers with localizable features,'' in \emph{ICCV}, 2019.
+
+\bibitem{mediau2025}
+MediAug, ``Exploring visual augmentation in medical imaging,'' \emph{arXiv:2504.18983}, 2025.
+
+\bibitem{szegedy2016}
+C.~Szegedy \emph{et~al.}, ``Rethinking the Inception architecture for computer vision,'' in \emph{CVPR}, 2016.
+
+\bibitem{buda2018}
+M.~Buda, A.~Maki, and M.~A.~Mazurowski, ``A systematic study of the class imbalance problem in convolutional neural networks,'' \emph{Neural Netw.}, vol.~106, pp.~249--259, 2018.
+
+\bibitem{loshchilov2019}
+I.~Loshchilov and F.~Hutter, ``Decoupled weight decay regularization,'' in \emph{ICLR}, 2019.
+
+\bibitem{pascanu2013}
+R.~Pascanu, T.~Mikolov, and Y.~Bengio, ``On the difficulty of training recurrent neural networks,'' in \emph{ICML}, 2013.
+
+\bibitem{garcea2023}
+F.~Garcea \emph{et~al.}, ``Data augmentation for medical imaging: A systematic literature review,'' \emph{Comput.\ Biol.\ Med.}, vol.~152, 106391, 2023.
+
+\bibitem{castro2020}
+E.~Castro \emph{et~al.}, ``Causality matters in medical imaging,'' \emph{Nat.\ Commun.}, vol.~11, 3673, 2020.
+
+\bibitem{selvaraju2017}
+R.~R.~Selvaraju \emph{et~al.}, ``Grad-CAM: Visual explanations from deep networks via gradient-based localization,'' in \emph{ICCV}, 2017.
+
+\bibitem{shiri2024}
+I.~Shiri \emph{et~al.}, ``BayTTA: Uncertainty-aware medical image classification with optimized test-time augmentation using Bayesian model averaging,'' \emph{arXiv}, 2024.
+
+\end{thebibliography}
+\endgroup
+
+\end{document}
