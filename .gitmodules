@@ -1,0 +1,3 @@
+[submodule "COMP532/Assignments/CA02/COMP532/Assignments/CA02/lichess-bot"]
+	path = COMP532/Assignments/CA02/COMP532/Assignments/CA02/lichess-bot
+	url = https://github.com/lichess-bot-devs/lichess-bot.git

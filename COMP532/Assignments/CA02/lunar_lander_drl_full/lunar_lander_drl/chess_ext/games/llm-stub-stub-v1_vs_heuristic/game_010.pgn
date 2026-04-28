@@ -1,0 +1,9 @@
+[Event "COMP532 chess extension"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "heuristic"]
+[Black "llm-stub-stub-v1"]
+[Result "1/2-1/2"]
+
+1. Nc3 e5 2. Nf3 e4 3. Nxe4 d5 4. d4 Nf6 5. Nxf6+ Qxf6 6. e4 Qxf3 7. Qxf3 dxe4 8. Qxe4+ Be6 9. Qxe6+ fxe6 10. Bf4 Nc6 11. Bxc7 Nxd4 12. Bc4 Nxc2+ 13. Kf1 Nxa1 14. Bxe6 Nb3 15. Bxb3 Bd6 16. Bxd6 O-O-O 17. Kg1 Rxd6 18. h3 Kb8 19. a3 Rd2 20. Bc4 Rxf2 21. Kxf2 Re8 22. Kg1 Rf8 23. Be6 Rf2 24. Kxf2 h6 25. Kg1 a6 26. Bd5 h5 27. Bxb7 Kxb7 28. a4 Kb8 29. a5 Ka8 30. h4 Kb8 31. Rh2 Kb7 32. Rh1 Ka8 33. Rh2 Kb8 34. Rh1 Kb7 35. Rh2 Kb8 36. Rh1 Ka8 37. Rh3 Kb7 38. Rg3 Kb8 39. Rxg7 Kc8 40. Rc7+ Kxc7 41. g4 hxg4 42. h5 Kb8 43. h6 Ka8 44. h7 g3 45. h8=Q+ Ka7 46. Qd4+ Ka8 47. Qe5 g2 48. Kxg2 Ka7 49. Kg1 Kb7 50. Qc5 Kb8 51. Qe5+ Ka8 52. Qd4 Kb8 53. Qf6 Ka8 54. Qxa6+ Kb8 55. Qe6 Ka8 56. a6 Kb8 57. a7+ Ka8 58. Qf5 Kb7 59. a8=Q+ Kxa8 60. Qd3 Kb7 1/2-1/2

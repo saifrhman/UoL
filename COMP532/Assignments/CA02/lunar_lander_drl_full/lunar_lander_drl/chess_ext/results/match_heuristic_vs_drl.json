@@ -1,0 +1,84 @@
+{
+  "agent_a": "heuristic",
+  "agent_b": "drl",
+  "n_games": 10,
+  "a_wins": 3,
+  "b_wins": 2,
+  "draws": 5,
+  "a_winrate": 0.55,
+  "b_winrate": 0.45,
+  "avg_plies": 71.8,
+  "duration_s": 6.674302577972412,
+  "games": [
+    {
+      "white": "heuristic",
+      "black": "drl",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 72
+    },
+    {
+      "white": "drl",
+      "black": "heuristic",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 41
+    },
+    {
+      "white": "heuristic",
+      "black": "drl",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 76
+    },
+    {
+      "white": "drl",
+      "black": "heuristic",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 33
+    },
+    {
+      "white": "heuristic",
+      "black": "drl",
+      "result": "1/2-1/2",
+      "termination": "insufficient material",
+      "plies": 96
+    },
+    {
+      "white": "drl",
+      "black": "heuristic",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 82
+    },
+    {
+      "white": "heuristic",
+      "black": "drl",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 88
+    },
+    {
+      "white": "drl",
+      "black": "heuristic",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 60
+    },
+    {
+      "white": "heuristic",
+      "black": "drl",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 110
+    },
+    {
+      "white": "drl",
+      "black": "heuristic",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 60
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+
+========== random  vs  llm-stub-stub-v1  (10 games) ==========
+[  1/10] random vs llm-stub-stub-v1: 0-1 (checkmate, 30 plies)  score: A=0 B=1 D=0
+[  2/10] llm-stub-stub-v1 vs random: 1-0 (checkmate, 61 plies)  score: A=0 B=2 D=0
+[  3/10] random vs llm-stub-stub-v1: 0-1 (checkmate, 48 plies)  score: A=0 B=3 D=0
+[  4/10] llm-stub-stub-v1 vs random: 1-0 (checkmate, 67 plies)  score: A=0 B=4 D=0
+[  5/10] random vs llm-stub-stub-v1: 0-1 (checkmate, 32 plies)  score: A=0 B=5 D=0
+[  6/10] llm-stub-stub-v1 vs random: 1-0 (checkmate, 51 plies)  score: A=0 B=6 D=0
+[  7/10] random vs llm-stub-stub-v1: 1/2-1/2 (threefold repetition, 66 plies)  score: A=0 B=6 D=1
+[  8/10] llm-stub-stub-v1 vs random: 1-0 (checkmate, 19 plies)  score: A=0 B=7 D=1
+[  9/10] random vs llm-stub-stub-v1: 0-1 (checkmate, 50 plies)  score: A=0 B=8 D=1
+[ 10/10] llm-stub-stub-v1 vs random: 1-0 (checkmate, 47 plies)  score: A=0 B=9 D=1
+
+Final: random 0-9-1 llm-stub-stub-v1  (win-rate A=5.00%)  duration=0.9s
+
+========== random  vs  heuristic  (10 games) ==========
+[  1/10] random vs heuristic: 0-1 (checkmate, 64 plies)  score: A=0 B=1 D=0
+[  2/10] heuristic vs random: 1-0 (checkmate, 53 plies)  score: A=0 B=2 D=0
+[  3/10] random vs heuristic: 0-1 (checkmate, 56 plies)  score: A=0 B=3 D=0
+[  4/10] heuristic vs random: 1-0 (checkmate, 43 plies)  score: A=0 B=4 D=0
+[  5/10] random vs heuristic: 0-1 (checkmate, 52 plies)  score: A=0 B=5 D=0
+[  6/10] heuristic vs random: 1-0 (checkmate, 59 plies)  score: A=0 B=6 D=0
+[  7/10] random vs heuristic: 0-1 (checkmate, 68 plies)  score: A=0 B=7 D=0
+[  8/10] heuristic vs random: 1/2-1/2 (max plies, 120 plies)  score: A=0 B=7 D=1
+[  9/10] random vs heuristic: 0-1 (checkmate, 70 plies)  score: A=0 B=8 D=1
+[ 10/10] heuristic vs random: 1-0 (checkmate, 55 plies)  score: A=0 B=9 D=1
+
+Final: random 0-9-1 heuristic  (win-rate A=5.00%)  duration=1.2s
+
+========== random  vs  drl  (10 games) ==========
+[  1/10] random vs drl: 0-1 (checkmate, 28 plies)  score: A=0 B=1 D=0
+[  2/10] drl vs random: 1-0 (checkmate, 21 plies)  score: A=0 B=2 D=0
+[  3/10] random vs drl: 0-1 (checkmate, 58 plies)  score: A=0 B=3 D=0
+[  4/10] drl vs random: 1-0 (checkmate, 43 plies)  score: A=0 B=4 D=0
+[  5/10] random vs drl: 0-1 (checkmate, 52 plies)  score: A=0 B=5 D=0
+[  6/10] drl vs random: 1-0 (checkmate, 27 plies)  score: A=0 B=6 D=0
+[  7/10] random vs drl: 0-1 (checkmate, 4 plies)  score: A=0 B=7 D=0
+[  8/10] drl vs random: 1-0 (checkmate, 43 plies)  score: A=0 B=8 D=0
+[  9/10] random vs drl: 0-1 (checkmate, 98 plies)  score: A=0 B=9 D=0
+[ 10/10] drl vs random: 1-0 (checkmate, 17 plies)  score: A=0 B=10 D=0
+
+Final: random 0-10-0 drl  (win-rate A=0.00%)  duration=5.0s
+
+========== random  vs  stockfish-skill0  (10 games) ==========
+[  1/10] random vs stockfish-skill0: 0-1 (checkmate, 42 plies)  score: A=0 B=1 D=0
+[  2/10] stockfish-skill0 vs random: 1-0 (checkmate, 29 plies)  score: A=0 B=2 D=0
+[  3/10] random vs stockfish-skill0: 0-1 (checkmate, 34 plies)  score: A=0 B=3 D=0
+[  4/10] stockfish-skill0 vs random: 1-0 (checkmate, 31 plies)  score: A=0 B=4 D=0
+[  5/10] random vs stockfish-skill0: 0-1 (checkmate, 44 plies)  score: A=0 B=5 D=0
+[  6/10] stockfish-skill0 vs random: 1-0 (checkmate, 21 plies)  score: A=0 B=6 D=0
+[  7/10] random vs stockfish-skill0: 0-1 (checkmate, 52 plies)  score: A=0 B=7 D=0
+[  8/10] stockfish-skill0 vs random: 1-0 (checkmate, 53 plies)  score: A=0 B=8 D=0
+[  9/10] random vs stockfish-skill0: 0-1 (checkmate, 32 plies)  score: A=0 B=9 D=0
+[ 10/10] stockfish-skill0 vs random: 1-0 (checkmate, 29 plies)  score: A=0 B=10 D=0
+
+Final: random 0-10-0 stockfish-skill0  (win-rate A=0.00%)  duration=1.5s
+
+========== llm-stub-stub-v1  vs  heuristic  (10 games) ==========
+[  1/10] llm-stub-stub-v1 vs heuristic: 1/2-1/2 (threefold repetition, 115 plies)  score: A=0 B=0 D=1
+[  2/10] heuristic vs llm-stub-stub-v1: 1/2-1/2 (threefold repetition, 102 plies)  score: A=0 B=0 D=2
+[  3/10] llm-stub-stub-v1 vs heuristic: 1-0 (checkmate, 47 plies)  score: A=1 B=0 D=2
+[  4/10] heuristic vs llm-stub-stub-v1: 1/2-1/2 (threefold repetition, 71 plies)  score: A=1 B=0 D=3
+[  5/10] llm-stub-stub-v1 vs heuristic: 1/2-1/2 (threefold repetition, 88 plies)  score: A=1 B=0 D=4
+[  6/10] heuristic vs llm-stub-stub-v1: 1/2-1/2 (threefold repetition, 104 plies)  score: A=1 B=0 D=5
+[  7/10] llm-stub-stub-v1 vs heuristic: 0-1 (checkmate, 56 plies)  score: A=1 B=1 D=5
+[  8/10] heuristic vs llm-stub-stub-v1: 1/2-1/2 (threefold repetition, 72 plies)  score: A=1 B=1 D=6
+[  9/10] llm-stub-stub-v1 vs heuristic: 1/2-1/2 (threefold repetition, 81 plies)  score: A=1 B=1 D=7
+[ 10/10] heuristic vs llm-stub-stub-v1: 1/2-1/2 (max plies, 120 plies)  score: A=1 B=1 D=8
+
+Final: llm-stub-stub-v1 1-1-8 heuristic  (win-rate A=50.00%)  duration=1.1s
+
+========== llm-stub-stub-v1  vs  drl  (10 games) ==========
+[  1/10] llm-stub-stub-v1 vs drl: 1-0 (checkmate, 29 plies)  score: A=1 B=0 D=0
+[  2/10] drl vs llm-stub-stub-v1: 1/2-1/2 (threefold repetition, 80 plies)  score: A=1 B=0 D=1
+[  3/10] llm-stub-stub-v1 vs drl: 1-0 (checkmate, 29 plies)  score: A=2 B=0 D=1
+[  4/10] drl vs llm-stub-stub-v1: 1/2-1/2 (threefold repetition, 94 plies)  score: A=2 B=0 D=2
+[  5/10] llm-stub-stub-v1 vs drl: 1-0 (checkmate, 29 plies)  score: A=3 B=0 D=2
+[  6/10] drl vs llm-stub-stub-v1: 1/2-1/2 (threefold repetition, 75 plies)  score: A=3 B=0 D=3
+[  7/10] llm-stub-stub-v1 vs drl: 1-0 (checkmate, 29 plies)  score: A=4 B=0 D=3
+[  8/10] drl vs llm-stub-stub-v1: 1/2-1/2 (threefold repetition, 87 plies)  score: A=4 B=0 D=4
+[  9/10] llm-stub-stub-v1 vs drl: 1-0 (checkmate, 29 plies)  score: A=5 B=0 D=4
+[ 10/10] drl vs llm-stub-stub-v1: 1/2-1/2 (threefold repetition, 109 plies)  score: A=5 B=0 D=5
+
+Final: llm-stub-stub-v1 5-0-5 drl  (win-rate A=75.00%)  duration=6.2s
+
+========== llm-stub-stub-v1  vs  stockfish-skill0  (10 games) ==========
+[  1/10] llm-stub-stub-v1 vs stockfish-skill0: 0-1 (checkmate, 46 plies)  score: A=0 B=1 D=0
+[  2/10] stockfish-skill0 vs llm-stub-stub-v1: 1-0 (checkmate, 29 plies)  score: A=0 B=2 D=0
+[  3/10] llm-stub-stub-v1 vs stockfish-skill0: 0-1 (checkmate, 42 plies)  score: A=0 B=3 D=0
+[  4/10] stockfish-skill0 vs llm-stub-stub-v1: 1-0 (checkmate, 31 plies)  score: A=0 B=4 D=0
+[  5/10] llm-stub-stub-v1 vs stockfish-skill0: 0-1 (checkmate, 38 plies)  score: A=0 B=5 D=0
+[  6/10] stockfish-skill0 vs llm-stub-stub-v1: 1-0 (checkmate, 41 plies)  score: A=0 B=6 D=0
+[  7/10] llm-stub-stub-v1 vs stockfish-skill0: 0-1 (checkmate, 52 plies)  score: A=0 B=7 D=0
+[  8/10] stockfish-skill0 vs llm-stub-stub-v1: 1-0 (checkmate, 25 plies)  score: A=0 B=8 D=0
+[  9/10] llm-stub-stub-v1 vs stockfish-skill0: 0-1 (checkmate, 54 plies)  score: A=0 B=9 D=0
+[ 10/10] stockfish-skill0 vs llm-stub-stub-v1: 1-0 (checkmate, 29 plies)  score: A=0 B=10 D=0
+
+Final: llm-stub-stub-v1 0-10-0 stockfish-skill0  (win-rate A=0.00%)  duration=1.3s
+
+========== heuristic  vs  drl  (10 games) ==========
+[  1/10] heuristic vs drl: 1/2-1/2 (threefold repetition, 72 plies)  score: A=0 B=0 D=1
+[  2/10] drl vs heuristic: 1-0 (checkmate, 41 plies)  score: A=0 B=1 D=1
+[  3/10] heuristic vs drl: 1/2-1/2 (threefold repetition, 76 plies)  score: A=0 B=1 D=2
+[  4/10] drl vs heuristic: 1-0 (checkmate, 33 plies)  score: A=0 B=2 D=2
+[  5/10] heuristic vs drl: 1/2-1/2 (insufficient material, 96 plies)  score: A=0 B=2 D=3
+[  6/10] drl vs heuristic: 0-1 (checkmate, 82 plies)  score: A=1 B=2 D=3
+[  7/10] heuristic vs drl: 1/2-1/2 (threefold repetition, 88 plies)  score: A=1 B=2 D=4
+[  8/10] drl vs heuristic: 0-1 (checkmate, 60 plies)  score: A=2 B=2 D=4
+[  9/10] heuristic vs drl: 1/2-1/2 (threefold repetition, 110 plies)  score: A=2 B=2 D=5
+[ 10/10] drl vs heuristic: 0-1 (checkmate, 60 plies)  score: A=3 B=2 D=5
+
+Final: heuristic 3-2-5 drl  (win-rate A=55.00%)  duration=6.7s
+
+========== heuristic  vs  stockfish-skill0  (10 games) ==========
+[  1/10] heuristic vs stockfish-skill0: 0-1 (checkmate, 66 plies)  score: A=0 B=1 D=0
+[  2/10] stockfish-skill0 vs heuristic: 1-0 (checkmate, 37 plies)  score: A=0 B=2 D=0
+[  3/10] heuristic vs stockfish-skill0: 0-1 (checkmate, 40 plies)  score: A=0 B=3 D=0
+[  4/10] stockfish-skill0 vs heuristic: 1-0 (checkmate, 33 plies)  score: A=0 B=4 D=0
+[  5/10] heuristic vs stockfish-skill0: 0-1 (checkmate, 28 plies)  score: A=0 B=5 D=0
+[  6/10] stockfish-skill0 vs heuristic: 1-0 (checkmate, 49 plies)  score: A=0 B=6 D=0
+[  7/10] heuristic vs stockfish-skill0: 0-1 (checkmate, 42 plies)  score: A=0 B=7 D=0
+[  8/10] stockfish-skill0 vs heuristic: 1-0 (checkmate, 51 plies)  score: A=0 B=8 D=0
+[  9/10] heuristic vs stockfish-skill0: 0-1 (checkmate, 28 plies)  score: A=0 B=9 D=0
+[ 10/10] stockfish-skill0 vs heuristic: 1/2-1/2 (threefold repetition, 40 plies)  score: A=0 B=9 D=1
+
+Final: heuristic 0-9-1 stockfish-skill0  (win-rate A=5.00%)  duration=1.3s
+
+========== drl  vs  stockfish-skill0  (10 games) ==========
+[  1/10] drl vs stockfish-skill0: 0-1 (checkmate, 40 plies)  score: A=0 B=1 D=0
+[  2/10] stockfish-skill0 vs drl: 1-0 (checkmate, 63 plies)  score: A=0 B=2 D=0
+[  3/10] drl vs stockfish-skill0: 0-1 (checkmate, 58 plies)  score: A=0 B=3 D=0
+[  4/10] stockfish-skill0 vs drl: 1-0 (checkmate, 39 plies)  score: A=0 B=4 D=0
+[  5/10] drl vs stockfish-skill0: 0-1 (checkmate, 32 plies)  score: A=0 B=5 D=0
+[  6/10] stockfish-skill0 vs drl: 1-0 (checkmate, 29 plies)  score: A=0 B=6 D=0
+[  7/10] drl vs stockfish-skill0: 0-1 (checkmate, 78 plies)  score: A=0 B=7 D=0
+[  8/10] stockfish-skill0 vs drl: 1-0 (checkmate, 25 plies)  score: A=0 B=8 D=0
+[  9/10] drl vs stockfish-skill0: 0-1 (checkmate, 90 plies)  score: A=0 B=9 D=0
+[ 10/10] stockfish-skill0 vs drl: 1-0 (checkmate, 19 plies)  score: A=0 B=10 D=0
+
+Final: drl 0-10-0 stockfish-skill0  (win-rate A=0.00%)  duration=5.2s
+
+========== Per-agent totals ==========
+  stockfish-skill0                W 39 L  0 D  1  (98.8% over 40 games)
+  llm-stub-stub-v1                W 15 L 11 D 14  (55.0% over 40 games)
+  heuristic                       W 13 L 12 D 15  (51.2% over 40 games)
+  drl                             W 12 L 18 D 10  (42.5% over 40 games)
+  random                          W  0 L 38 D  2  (2.5% over 40 games)

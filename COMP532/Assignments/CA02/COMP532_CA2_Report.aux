@@ -1,0 +1,117 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{gymnasium}
+\citation{vanhasselt2016}
+\citation{wang2016}
+\citation{hessel2018}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Problem 1: Deep RL agent for LunarLander}{2}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Environment}{2}{subsection.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Choice of algorithm}{2}{subsection.1.2}\protected@file@percent }
+\newlabel{sec:alg}{{1.2}{2}{Choice of algorithm}{subsection.1.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}What we changed relative to the starter notebook}{2}{subsection.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.4}Network architecture}{2}{subsection.1.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Differences between the starter notebook and our submission.}}{3}{table.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:starter-vs-ours}{{1}{3}{Differences between the starter notebook and our submission}{table.caption.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.5}Replay, target network, and exploration}{3}{subsection.1.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.6}Hyper-parameters}{3}{subsection.1.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.7}Implementation outline}{3}{subsection.1.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.8}Results}{3}{subsection.1.8}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces All hyper-parameters used. Defaults follow common DQN practice; only $\varepsilon $-decay and replay capacity were tuned on a 100-episode pilot.}}{4}{table.caption.2}\protected@file@percent }
+\newlabel{tab:hp}{{2}{4}{All hyper-parameters used. Defaults follow common DQN practice; only $\varepsilon $-decay and replay capacity were tuned on a 100-episode pilot}{table.caption.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.9}Discussion}{4}{subsection.1.9}\protected@file@percent }
+\citation{sutton2018}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Episode reward (light) and 100-episode rolling mean (solid) over training. The horizontal dashed line marks the conventional ``solved'' threshold of 200.}}{5}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:rewards}{{1}{5}{Episode reward (light) and 100-episode rolling mean (solid) over training. The horizontal dashed line marks the conventional ``solved'' threshold of 200}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Problem 2: Exploration vs.\ exploitation in deep RL}{5}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Definitions and intuition}{5}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Why the trade-off is unavoidable in deep RL}{5}{subsection.2.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Per-update Huber loss vs.\ gradient step (log $y$-axis), with EMA smoothing for readability. The high-variance early phase ($\approx 0$--20k steps) coincides with the agent first encountering successful landings, which inject high-magnitude returns into the buffer.}}{6}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:loss}{{2}{6}{Per-update Huber loss vs.\ gradient step (log $y$-axis), with EMA smoothing for readability. The high-variance early phase ($\approx 0$--20k steps) coincides with the agent first encountering successful landings, which inject high-magnitude returns into the buffer}{figure.caption.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Common strategies}{6}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.1}$\varepsilon $-greedy}{6}{subsubsection.2.3.1}\protected@file@percent }
+\citation{burda2019rnd}
+\citation{fortunato2018}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces A representative frame from a greedy roll-out of the trained agent (also saved as \texttt  {videos/agent\_demo.gif}). The lander has touched down between the two flags.}}{7}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:demo}{{3}{7}{A representative frame from a greedy roll-out of the trained agent (also saved as \texttt {videos/agent\_demo.gif}). The lander has touched down between the two flags}{figure.caption.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.2}Boltzmann / softmax}{7}{subsubsection.2.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.3}Upper Confidence Bound (UCB)}{7}{subsubsection.2.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.4}Entropy regularisation}{7}{subsubsection.2.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.5}Noisy networks and parameter-space noise}{7}{subsubsection.2.3.5}\protected@file@percent }
+\citation{pathak2017}
+\citation{burda2019rnd}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.6}Intrinsic motivation and curiosity}{8}{subsubsection.2.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Practical challenges}{8}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}Application to LunarLander}{8}{subsection.2.5}\protected@file@percent }
+\citation{silver2018alphazero}
+\citation{feng2023chessgpt}
+\citation{kolasani2025llmchess}
+\citation{pythonchess}
+\citation{lichessbot}
+\citation{carlini2023chessllm}
+\citation{silver2018alphazero}
+\citation{zjeffer2022chesszero}
+\citation{carlini2023chessllm}
+\citation{kolasani2025llmchess}
+\citation{feng2023chessgpt}
+\citation{strategicrl2025}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Optional extension: chess-playing agents}{9}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Scope and methodological choices}{9}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why not OpenAI Gym?}{9}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why not chess.com?}{9}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Research summary: DRL vs.\ LLMs for chess}{9}{subsection.3.2}\protected@file@percent }
+\citation{stockfish}
+\citation{kolasani2025llmchess}
+\citation{carlini2023chessllm}
+\@writefile{toc}{\contentsline {paragraph}{Recommendation.}{10}{Item.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Five agents under test}{10}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:five-agents}{{3.3}{10}{Five agents under test}{subsection.3.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}LLM agent design}{10}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:llm}{{3.4}{10}{LLM agent design}{subsection.3.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Prompt and parser.}{10}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Why a stub backend.}{10}{lstnumber.-3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Reproducibility-affecting limitations of the LLM path.}{10}{lstnumber.-3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}DRL agent design}{11}{subsection.3.5}\protected@file@percent }
+\newlabel{sec:drl}{{3.5}{11}{DRL agent design}{subsection.3.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Architecture.}{11}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Encoding.}{11}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Network.}{11}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Training.}{11}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Chess training results}{11}{subsection.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7}Tournament: full ablation}{11}{subsection.3.7}\protected@file@percent }
+\newlabel{sec:tournament}{{3.7}{11}{Tournament: full ablation}{subsection.3.7}{}}
+\@writefile{toc}{\contentsline {paragraph}{Reading the table.}{11}{figure.caption.9}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces DRL chess agent: evaluation win-rate against the Random and Heuristic baselines, evaluated every 20 self-play training games. Combined = mean of the two. The dashed line is the coin-flip baseline.}}{12}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:chess-train}{{4}{12}{DRL chess agent: evaluation win-rate against the Random and Heuristic baselines, evaluated every 20 self-play training games. Combined = mean of the two. The dashed line is the coin-flip baseline}{figure.caption.6}{}}
+\@writefile{toc}{\contentsline {paragraph}{Sample game (DRL beats Random as Black, mate in 14).}{12}{figure.caption.9}\protected@file@percent }
+\citation{lichessbot}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Value-network MSE loss vs.\ gradient step (linear $y$-axis). The slow upward drift after step ${\approx }1{,}500$ reflects the value-target distribution shift as the policy improves and visits more sharply-decided positions.}}{13}{figure.caption.7}\protected@file@percent }
+\newlabel{fig:chess-loss}{{5}{13}{Value-network MSE loss vs.\ gradient step (linear $y$-axis). The slow upward drift after step ${\approx }1{,}500$ reflects the value-target distribution shift as the policy improves and visits more sharply-decided positions}{figure.caption.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.8}Playing online: lichess deployment}{13}{subsection.3.8}\protected@file@percent }
+\newlabel{sec:online}{{3.8}{13}{Playing online: lichess deployment}{subsection.3.8}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Round-robin tournament: each cell is wins--losses--draws \emph  {from the row player's perspective} over 10 games (5 with each colour). The right-most column is the row player's overall win-rate (wins\,+\,0.5\,draws) summed across all 40 of their games.}}{14}{table.caption.8}\protected@file@percent }
+\newlabel{tab:tournament}{{3}{14}{Round-robin tournament: each cell is wins--losses--draws \emph {from the row player's perspective} over 10 games (5 with each colour). The right-most column is the row player's overall win-rate (wins\,+\,0.5\,draws) summed across all 40 of their games}{table.caption.8}{}}
+\bibcite{vanhasselt2016}{1}
+\bibcite{wang2016}{2}
+\bibcite{hessel2018}{3}
+\bibcite{fortunato2018}{4}
+\bibcite{pathak2017}{5}
+\bibcite{burda2019rnd}{6}
+\bibcite{sutton2018}{7}
+\bibcite{gymnasium}{8}
+\bibcite{silver2018alphazero}{9}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Head-to-head win-rate as a heat-map: each cell shows wins--losses--draws (and per-cent score) for the row player vs the column player over 10 games. Green = row wins; red = row loses.}}{15}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:matrix}{{6}{15}{Head-to-head win-rate as a heat-map: each cell shows wins--losses--draws (and per-cent score) for the row player vs the column player over 10 games. Green = row wins; red = row loses}{figure.caption.9}{}}
+\bibcite{feng2023chessgpt}{10}
+\bibcite{kolasani2025llmchess}{11}
+\bibcite{carlini2023chessllm}{12}
+\bibcite{strategicrl2025}{13}
+\bibcite{zjeffer2022chesszero}{14}
+\bibcite{pythonchess}{15}
+\bibcite{lichessbot}{16}
+\bibcite{stockfish}{17}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Final position of the sample DRL win: Black's queen on f2 delivers checkmate; the white king on f1 has no escape squares because the black knight on d1 covers e2 and the c-pawn on c2 is pinned by the bishop on a3 only nominally -- there is no legal defence.}}{16}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:samplegame}{{7}{16}{Final position of the sample DRL win: Black's queen on f2 delivers checkmate; the white king on f1 has no escape squares because the black knight on d1 covers e2 and the c-pawn on c2 is pinned by the bishop on a3 only nominally -- there is no legal defence}{figure.caption.10}{}}
+\gdef \@abspage@last{16}

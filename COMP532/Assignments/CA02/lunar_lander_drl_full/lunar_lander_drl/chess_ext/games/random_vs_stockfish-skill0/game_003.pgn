@@ -1,0 +1,9 @@
+[Event "COMP532 chess extension"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "random"]
+[Black "stockfish-skill0"]
+[Result "0-1"]
+
+1. d4 d5 2. h4 e6 3. Nd2 Bd6 4. Nh3 Nd7 5. Ng1 e5 6. f3 c6 7. b3 Ngf6 8. f4 exf4 9. Bb2 O-O 10. Nc4 dxc4 11. e3 Re8 12. e4 Qa5+ 13. Qd2 Bb4 14. e5 Bxd2+ 15. Kf2 Be3+ 16. Ke2 Qd2+ 17. Kf3 Qf2# 0-1

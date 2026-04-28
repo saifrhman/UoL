@@ -1,0 +1,9 @@
+[Event "COMP532 chess extension"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "heuristic"]
+[Black "llm-stub-stub-v1"]
+[Result "1/2-1/2"]
+
+1. Nf3 e5 2. Nxe5 d5 3. Nxf7 d4 4. Nxd8 Nf6 5. Nxb7 Nc6 6. Nc3 dxc3 7. dxc3 Bxb7 8. e4 Nxe4 9. Bc4 Nxf2 10. Kxf2 Bd6 11. Qxd6 cxd6 12. Kg1 d5 13. Bxd5 O-O-O 14. Bxc6 Bxc6 15. Bf4 Bxg2 16. Kxg2 Kb7 17. Kg1 Rhe8 18. c4 Re2 19. c5 Rxc2 20. c6+ Rxc6 21. Rd1 Rxd1+ 22. Kg2 Rxh1 23. Kxh1 Rc2 24. Kg1 Rxb2 25. Bd6 Rxh2 26. Kxh2 h6 27. Kg1 a6 28. a3 Ka8 29. Bf4 Kb7 30. Bxh6 gxh6 31. a4 Ka8 32. a5 Kb7 33. Kg2 Ka8 34. Kg1 Kb7 35. Kg2 Kb8 36. Kg1 1/2-1/2

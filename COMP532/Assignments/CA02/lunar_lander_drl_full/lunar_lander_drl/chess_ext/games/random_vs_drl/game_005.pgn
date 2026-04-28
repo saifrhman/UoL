@@ -1,0 +1,9 @@
+[Event "COMP532 chess extension"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "random"]
+[Black "drl"]
+[Result "0-1"]
+
+1. c3 e5 2. f3 d6 3. f4 Nf6 4. d3 Ke7 5. Qd2 exf4 6. a3 Bg4 7. Qe3+ fxe3 8. Ra2 Ne4 9. Nf3 Bxf3 10. Bd2 exd2+ 11. Kd1 Qd7 12. Rg1 Nxc3+ 13. Kc2 d1=Q+ 14. Kxc3 Qxd3+ 15. Kxd3 Bxg2 16. b4 Bxf1 17. Kc2 Bxe2 18. Rg2 Bf3 19. Nd2 Bxg2 20. Rb2 Be4+ 21. Nxe4 h5 22. Kd2 Rh6 23. Ng5 Re6 24. Kd3 Re4 25. Ne6 Qxe6 26. Rd2 Qc4# 0-1

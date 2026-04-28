@@ -1,0 +1,84 @@
+{
+  "agent_a": "drl",
+  "agent_b": "stockfish-skill0",
+  "n_games": 10,
+  "a_wins": 0,
+  "b_wins": 10,
+  "draws": 0,
+  "a_winrate": 0.0,
+  "b_winrate": 1.0,
+  "avg_plies": 47.3,
+  "duration_s": 5.172640323638916,
+  "games": [
+    {
+      "white": "drl",
+      "black": "stockfish-skill0",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 40
+    },
+    {
+      "white": "stockfish-skill0",
+      "black": "drl",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 63
+    },
+    {
+      "white": "drl",
+      "black": "stockfish-skill0",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 58
+    },
+    {
+      "white": "stockfish-skill0",
+      "black": "drl",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 39
+    },
+    {
+      "white": "drl",
+      "black": "stockfish-skill0",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 32
+    },
+    {
+      "white": "stockfish-skill0",
+      "black": "drl",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 29
+    },
+    {
+      "white": "drl",
+      "black": "stockfish-skill0",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 78
+    },
+    {
+      "white": "stockfish-skill0",
+      "black": "drl",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 25
+    },
+    {
+      "white": "drl",
+      "black": "stockfish-skill0",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 90
+    },
+    {
+      "white": "stockfish-skill0",
+      "black": "drl",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 19
+    }
+  ]
+}

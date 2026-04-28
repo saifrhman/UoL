@@ -614,12 +614,14 @@ minutes on CPU; the goal of the extension is to demonstrate the
     Wiki). For each legal move, push, evaluate, pop; play the move
     that maximises evaluation from the side-to-move's perspective.
     Ties broken at random.
-  \item \textbf{LLMAgent}: a configurable agent with two backends
+  \item \textbf{LLMAgent}: a configurable agent with three backends
     sharing the same prompt-and-parse pipeline (Section~\ref{sec:llm}).
-    The \texttt{stub} backend runs offline and reproduces the
-    documented LLM failure modes (hallucinated moves, late-game
-    collapse, endgame blindness). The \texttt{openai}/\texttt{anthropic}
-    backends issue real API calls.
+    The default \texttt{openrouter} backend calls
+    \texttt{anthropic/claude-opus-4.6} via OpenRouter's
+    OpenAI-compatible endpoint. The \texttt{anthropic} backend hits
+    Anthropic's own API directly. The \texttt{stub} backend runs
+    offline and reproduces the documented LLM failure modes
+    (hallucinated moves, late-game collapse, endgame blindness).
   \item \textbf{DRLAgent}: a small CNN value network trained by
     temporal-difference learning against a weak Stockfish
     (Section~\ref{sec:drl}).
@@ -651,20 +653,49 @@ the explicit message that the previous response was illegal, up to
 \texttt{HeuristicAgent}, so the pipeline never forfeits a game on a
 bad reply.
 
-\paragraph{Why a stub backend.} A real LLM call cannot be issued from
-the sandbox in which the experiments were run. Rather than fake a
-constant ``e4'' response that would mis-represent the agent, we built
-an offline simulator that reproduces the LLM behaviour reported in
+\paragraph{Backends.} The agent has three backends sharing this same
+prompt-and-parse pipeline:
+\begin{itemize}
+  \item \textbf{\texttt{openrouter}} (recommended): calls any model on
+    OpenRouter \cite{openrouter}, which exposes an OpenAI-compatible
+    chat-completions endpoint at \texttt{https://openrouter.ai/api/v1}.
+    For this assignment we use
+    \texttt{anthropic/claude-opus-4.6}~\cite{claude-opus-46}, the
+    strongest publicly-available coding/reasoning Claude model at
+    submission time. OpenRouter is preferred over the
+    Anthropic-direct API because it gives a single key and unified
+    billing across providers, and the same code path works for any
+    model on OpenRouter (e.g.\ \texttt{openai/gpt-4o},
+    \texttt{anthropic/claude-haiku-4.5}, etc.).
+  \item \textbf{\texttt{anthropic}}: calls Anthropic's API directly
+    via the \texttt{anthropic} Python client.
+  \item \textbf{\texttt{stub}}: an offline simulator (described below)
+    used when no API key is available, so that the prompt/parse/repair
+    pipeline can be exercised without network access.
+\end{itemize}
+
+\paragraph{Why a stub backend in addition.} A real LLM call cannot be
+issued from a hermetic CI sandbox. Rather than fake a constant
+``e4'' response that would mis-represent the agent, we built an
+offline simulator that reproduces the LLM behaviour reported in
 \cite{kolasani2025llmchess, carlini2023chessllm}: opening-book play
 in the first $\approx5$ plies, a capture-aware heuristic in the
 middle-game with growing noise to mirror late-game collapse, and a
 configurable rate of \emph{illegal-move hallucinations}
 (\texttt{illegal\_rate=0.05}) so that the legality-repair loop is
-genuinely exercised. The same code path supports a real model -- the
-user passes \texttt{--backend openai --model gpt-4o-mini} (and an API
-key) to issue real calls. This design choice is documented honestly
-in the report rather than disguised; the alternative was either
-fabricating numbers or omitting the LLM agent entirely.
+genuinely exercised. This made the in-sandbox tournament numbers
+reported in Section~\ref{sec:tournament} reproducible while the same
+code path supports a real model when keys are available.
+
+\paragraph{Cost.} Calling Claude Opus 4.6 over OpenRouter is priced
+at \$5/MTok input and \$25/MTok output \cite{claude-opus-46}. A
+single chess move query is roughly 300 input tokens (FEN + legal
+moves list) and ${\approx}5$ output tokens, so one move costs about
+\pounds 0.0014. A typical 80-ply game with the bot playing 40 plies
+costs ${\approx}$\pounds 0.06; 100 games costs ${\approx}$\pounds 6.
+For sustained operation we recommend the Haiku-tier model
+(\texttt{anthropic/claude-haiku-4.5}, ${\approx}10\times$ cheaper) and
+reserving Opus 4.6 for showcase games.
 
 \paragraph{Reproducibility-affecting limitations of the LLM path.}
 \begin{itemize}
@@ -672,8 +703,12 @@ fabricating numbers or omitting the LLM agent entirely.
     \texttt{temperature\,>\,0}. With \texttt{temperature\,=\,0.2} the
     same query can still yield different moves on different days.
   \item Provider-side model versions are silently updated (e.g.\
-    \texttt{gpt-4o-mini} pinned to a date), so re-running months later
+    a Claude model slug pinned to a date), so re-running months later
     will produce different numbers.
+  \item OpenRouter routes each call to one of several upstream
+    providers (Anthropic, AWS Bedrock, GCP Vertex) and the routing
+    decision is not stable across calls, so byte-identical prompts
+    can return slightly different completions.
   \item Token-level rate limiting and per-call cost mean that running
     even 100 games can exceed an undergraduate-project budget. Our
     stub costs \pounds 0.
@@ -836,31 +871,56 @@ colour). The right-most column is the row player's overall win-rate
 \subsection{Playing online: lichess deployment}
 \label{sec:online}
 
-All four of our agents speak the Universal Chess Interface (UCI) via
-\texttt{python -m chess\_ext.uci --agent <name>}. To play live games
-against humans on lichess.org, the standard recipe is:
-\begin{enumerate}
-  \item Sign up for a brand-new lichess account, mint an OAuth token
-    with the \texttt{bot:play} scope, and convert the account to a BOT.
-  \item Clone \texttt{lichess-bot-devs/lichess-bot} \cite{lichessbot}
-    and configure \texttt{config.yml} to launch our UCI shim:
+We deployed the bot live on lichess.org via the official
+\texttt{lichess-bot} bridge \cite{lichessbot}. The bridge offers two
+ways to connect a Python engine: writing a full UCI binary, or using
+its \emph{homemade engine} mechanism --- a single Python class that
+subclasses \texttt{MinimalEngine} and implements one method,
+\texttt{search(board, time\_limit, ponder, draw\_offered, root\_moves)},
+returning a \texttt{chess.engine.PlayResult}. We chose the homemade
+path because it lets us call our existing agent classes directly
+without an extra UCI serialisation/deserialisation hop, and because
+several wiki pages \cite{lichessbot-wiki} explicitly recommend it for
+Python-only engines.
+
+The repository ships a generator cell in
+\texttt{chess\_extension.ipynb} that writes two files into the
+working directory:
+\begin{itemize}
+  \item \texttt{homemade.py} -- contains \texttt{Comp532Bot}, a
+    \texttt{MinimalEngine} subclass whose \texttt{search()} method
+    delegates to one of \texttt{HeuristicAgent},
+    \texttt{DRLAgent}, or \texttt{LLMAgent}. The choice of agent is
+    selected at runtime via the environment variable
+    \texttt{COMP532\_AGENT}, defaulting to \texttt{heuristic} so a
+    misconfiguration cannot accidentally rack up API costs.
+  \item \texttt{config.yml} -- a minimal lichess-bot config with
+    \texttt{engine.protocol: homemade} and
+    \texttt{engine.name: Comp532Bot}.
+\end{itemize}
+
+\paragraph{Credentials.} All credentials are read from environment
+variables, never embedded in either file. The bot operator runs:
 \begin{lstlisting}[language=bash]
-engine:
-  dir: "../lunar_lander_drl"
-  name: "uci_runner.sh"
-  protocol: "uci"
+export LICHESS_BOT_TOKEN='lip_...'        # bot:play OAuth token
+export OPENROUTER_API_KEY='sk-or-v1-...'  # only if COMP532_AGENT=llm
+export COMP532_AGENT='heuristic'          # or 'drl' or 'llm'
+export COMP532_DRL_MODEL=/path/to/chess_drl.pt
+python lichess-bot.py
 \end{lstlisting}
-    where \texttt{uci\_runner.sh} simply does
-\begin{lstlisting}[language=bash]
-exec python -m chess_ext.uci \
-    --agent drl --model chess_ext/models/drl_value.pt
-\end{lstlisting}
-  \item Run \texttt{python lichess-bot.py}; humans can now challenge
-    your bot.
-\end{enumerate}
-Full instructions live in \texttt{chess\_ext/PLAYING\_ONLINE.md}.
-We did \emph{not} attempt to play \texttt{chess.com} for the reasons
-explained at the top of this section.
+This separation matters: it lets the same code be source-controlled
+and shared (e.g.\ submitted alongside the report) without leaking a
+key, and it sets the agent's spending intent at the shell rather
+than in a file that might be committed by accident.
+
+\paragraph{Why not chess.com?} Chess.com offers no public bot/play
+API. The two ways a program could play there in practice are
+(i) authenticated browser automation against the chess.com web UI,
+and (ii) reverse-engineering the private REST endpoints used by their
+own front-end. Both violate the chess.com Terms of Service and risk
+account bans. Lichess is the supported equivalent; bots there are
+clearly labelled (\texttt{title: BOT}), get a real Glicko-2 rating,
+and are first-class citizens of the platform.
 
 % =====================================================================
 \newpage
@@ -948,6 +1008,21 @@ N.\ Fiekas.
 lichess-bot-devs.
 \newblock A bridge between Lichess bots and chess engines.
 \newblock \url{https://github.com/lichess-bot-devs/lichess-bot}.
+
+\bibitem{lichessbot-wiki}
+lichess-bot-devs.
+\newblock Create a homemade engine -- lichess-bot wiki.
+\newblock \url{https://github.com/lichess-bot-devs/lichess-bot/wiki/Create-a-homemade-engine}.
+
+\bibitem{openrouter}
+OpenRouter.
+\newblock OpenAI-compatible API gateway to LLM providers.
+\newblock \url{https://openrouter.ai/}.
+
+\bibitem{claude-opus-46}
+Anthropic.
+\newblock Claude Opus 4.6 model card.
+\newblock \url{https://openrouter.ai/anthropic/claude-opus-4.6}, 2026.
 
 \bibitem{stockfish}
 The Stockfish developers.

@@ -1,0 +1,84 @@
+{
+  "agent_a": "llm-stub-stub-v1",
+  "agent_b": "heuristic",
+  "n_games": 10,
+  "a_wins": 1,
+  "b_wins": 1,
+  "draws": 8,
+  "a_winrate": 0.5,
+  "b_winrate": 0.5,
+  "avg_plies": 85.6,
+  "duration_s": 1.1480371952056885,
+  "games": [
+    {
+      "white": "llm-stub-stub-v1",
+      "black": "heuristic",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 115
+    },
+    {
+      "white": "heuristic",
+      "black": "llm-stub-stub-v1",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 102
+    },
+    {
+      "white": "llm-stub-stub-v1",
+      "black": "heuristic",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 47
+    },
+    {
+      "white": "heuristic",
+      "black": "llm-stub-stub-v1",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 71
+    },
+    {
+      "white": "llm-stub-stub-v1",
+      "black": "heuristic",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 88
+    },
+    {
+      "white": "heuristic",
+      "black": "llm-stub-stub-v1",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 104
+    },
+    {
+      "white": "llm-stub-stub-v1",
+      "black": "heuristic",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 56
+    },
+    {
+      "white": "heuristic",
+      "black": "llm-stub-stub-v1",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 72
+    },
+    {
+      "white": "llm-stub-stub-v1",
+      "black": "heuristic",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 81
+    },
+    {
+      "white": "heuristic",
+      "black": "llm-stub-stub-v1",
+      "result": "1/2-1/2",
+      "termination": "max plies",
+      "plies": 120
+    }
+  ]
+}

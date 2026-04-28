@@ -1,0 +1,9 @@
+[Event "COMP532 chess extension"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "llm-stub-stub-v1"]
+[Black "drl"]
+[Result "1-0"]
+
+1. e4 c5 2. d4 Qa5+ 3. Nc3 Qb4 4. Nf3 cxd4 5. g3 dxc3 6. bxc3 e6 7. cxb4 Bxb4+ 8. Bd2 Nf6 9. Bxb4 Nd5 10. Qxd5 exd5 11. exd5 Nc6 12. dxc6 d5 13. cxb7 Rf8 14. bxa8=Q h5 15. Qxc8# 1-0

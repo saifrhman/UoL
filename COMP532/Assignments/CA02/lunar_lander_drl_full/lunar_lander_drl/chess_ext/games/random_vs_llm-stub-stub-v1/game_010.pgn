@@ -1,0 +1,9 @@
+[Event "COMP532 chess extension"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "llm-stub-stub-v1"]
+[Black "random"]
+[Result "1-0"]
+
+1. e4 Nc6 2. d4 d5 3. Nf3 Rb8 4. Nc3 Kd7 5. g3 Nb4 6. Nxd5 e6 7. Nxb4 g6 8. Nd5 Bb4+ 9. Nxb4 a6 10. Bxa6 Qe8 11. Bxb7 g5 12. Bxc8+ Kd6 13. Bxe6 f6 14. Bxg8 Qe5 15. Nxe5 Rhxg8 16. Bxg5 Rbf8 17. Bxf6 c6 18. Nbxc6 Ra8 19. O-O Rae8 20. Qf3 Ref8 21. Rfe1 h5 22. Qxh5 Ke6 23. Qf5+ Kd6 24. Qd7# 1-0

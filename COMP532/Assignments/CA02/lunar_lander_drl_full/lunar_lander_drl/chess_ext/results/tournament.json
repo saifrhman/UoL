@@ -1,0 +1,172 @@
+{
+  "matrix": {
+    "random": {
+      "llm-stub-stub-v1": {
+        "wins": 0,
+        "losses": 9,
+        "draws": 1,
+        "winrate": 0.05
+      },
+      "heuristic": {
+        "wins": 0,
+        "losses": 9,
+        "draws": 1,
+        "winrate": 0.05
+      },
+      "drl": {
+        "wins": 0,
+        "losses": 10,
+        "draws": 0,
+        "winrate": 0.0
+      },
+      "stockfish-skill0": {
+        "wins": 0,
+        "losses": 10,
+        "draws": 0,
+        "winrate": 0.0
+      }
+    },
+    "llm-stub-stub-v1": {
+      "random": {
+        "wins": 9,
+        "losses": 0,
+        "draws": 1,
+        "winrate": 0.95
+      },
+      "heuristic": {
+        "wins": 1,
+        "losses": 1,
+        "draws": 8,
+        "winrate": 0.5
+      },
+      "drl": {
+        "wins": 5,
+        "losses": 0,
+        "draws": 5,
+        "winrate": 0.75
+      },
+      "stockfish-skill0": {
+        "wins": 0,
+        "losses": 10,
+        "draws": 0,
+        "winrate": 0.0
+      }
+    },
+    "heuristic": {
+      "random": {
+        "wins": 9,
+        "losses": 0,
+        "draws": 1,
+        "winrate": 0.95
+      },
+      "llm-stub-stub-v1": {
+        "wins": 1,
+        "losses": 1,
+        "draws": 8,
+        "winrate": 0.5
+      },
+      "drl": {
+        "wins": 3,
+        "losses": 2,
+        "draws": 5,
+        "winrate": 0.55
+      },
+      "stockfish-skill0": {
+        "wins": 0,
+        "losses": 9,
+        "draws": 1,
+        "winrate": 0.05
+      }
+    },
+    "drl": {
+      "random": {
+        "wins": 10,
+        "losses": 0,
+        "draws": 0,
+        "winrate": 1.0
+      },
+      "llm-stub-stub-v1": {
+        "wins": 0,
+        "losses": 5,
+        "draws": 5,
+        "winrate": 0.25
+      },
+      "heuristic": {
+        "wins": 2,
+        "losses": 3,
+        "draws": 5,
+        "winrate": 0.45
+      },
+      "stockfish-skill0": {
+        "wins": 0,
+        "losses": 10,
+        "draws": 0,
+        "winrate": 0.0
+      }
+    },
+    "stockfish-skill0": {
+      "random": {
+        "wins": 10,
+        "losses": 0,
+        "draws": 0,
+        "winrate": 1.0
+      },
+      "llm-stub-stub-v1": {
+        "wins": 10,
+        "losses": 0,
+        "draws": 0,
+        "winrate": 1.0
+      },
+      "heuristic": {
+        "wins": 9,
+        "losses": 0,
+        "draws": 1,
+        "winrate": 0.95
+      },
+      "drl": {
+        "wins": 10,
+        "losses": 0,
+        "draws": 0,
+        "winrate": 1.0
+      }
+    }
+  },
+  "per_agent": {
+    "random": {
+      "wins": 0,
+      "losses": 38,
+      "draws": 2,
+      "games": 40,
+      "winrate": 0.025
+    },
+    "llm-stub-stub-v1": {
+      "wins": 15,
+      "losses": 11,
+      "draws": 14,
+      "games": 40,
+      "winrate": 0.55
+    },
+    "heuristic": {
+      "wins": 13,
+      "losses": 12,
+      "draws": 15,
+      "games": 40,
+      "winrate": 0.5125
+    },
+    "drl": {
+      "wins": 12,
+      "losses": 18,
+      "draws": 10,
+      "games": 40,
+      "winrate": 0.425
+    },
+    "stockfish-skill0": {
+      "wins": 39,
+      "losses": 0,
+      "draws": 1,
+      "games": 40,
+      "winrate": 0.9875
+    }
+  },
+  "n_games_per_pair": 10
+}

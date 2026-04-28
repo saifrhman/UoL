@@ -1,0 +1,84 @@
+{
+  "agent_a": "heuristic",
+  "agent_b": "stockfish-skill0",
+  "n_games": 10,
+  "a_wins": 0,
+  "b_wins": 9,
+  "draws": 1,
+  "a_winrate": 0.05,
+  "b_winrate": 0.95,
+  "avg_plies": 41.4,
+  "duration_s": 1.3183279037475586,
+  "games": [
+    {
+      "white": "heuristic",
+      "black": "stockfish-skill0",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 66
+    },
+    {
+      "white": "stockfish-skill0",
+      "black": "heuristic",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 37
+    },
+    {
+      "white": "heuristic",
+      "black": "stockfish-skill0",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 40
+    },
+    {
+      "white": "stockfish-skill0",
+      "black": "heuristic",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 33
+    },
+    {
+      "white": "heuristic",
+      "black": "stockfish-skill0",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 28
+    },
+    {
+      "white": "stockfish-skill0",
+      "black": "heuristic",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 49
+    },
+    {
+      "white": "heuristic",
+      "black": "stockfish-skill0",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 42
+    },
+    {
+      "white": "stockfish-skill0",
+      "black": "heuristic",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 51
+    },
+    {
+      "white": "heuristic",
+      "black": "stockfish-skill0",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 28
+    },
+    {
+      "white": "stockfish-skill0",
+      "black": "heuristic",
+      "result": "1/2-1/2",
+      "termination": "threefold repetition",
+      "plies": 40
+    }
+  ]
+}

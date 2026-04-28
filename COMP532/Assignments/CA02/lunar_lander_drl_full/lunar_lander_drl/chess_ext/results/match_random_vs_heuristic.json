@@ -1,0 +1,84 @@
+{
+  "agent_a": "random",
+  "agent_b": "heuristic",
+  "n_games": 10,
+  "a_wins": 0,
+  "b_wins": 9,
+  "draws": 1,
+  "a_winrate": 0.05,
+  "b_winrate": 0.95,
+  "avg_plies": 64.0,
+  "duration_s": 1.1997227668762207,
+  "games": [
+    {
+      "white": "random",
+      "black": "heuristic",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 64
+    },
+    {
+      "white": "heuristic",
+      "black": "random",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 53
+    },
+    {
+      "white": "random",
+      "black": "heuristic",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 56
+    },
+    {
+      "white": "heuristic",
+      "black": "random",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 43
+    },
+    {
+      "white": "random",
+      "black": "heuristic",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 52
+    },
+    {
+      "white": "heuristic",
+      "black": "random",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 59
+    },
+    {
+      "white": "random",
+      "black": "heuristic",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 68
+    },
+    {
+      "white": "heuristic",
+      "black": "random",
+      "result": "1/2-1/2",
+      "termination": "max plies",
+      "plies": 120
+    },
+    {
+      "white": "random",
+      "black": "heuristic",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 70
+    },
+    {
+      "white": "heuristic",
+      "black": "random",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 55
+    }
+  ]
+}

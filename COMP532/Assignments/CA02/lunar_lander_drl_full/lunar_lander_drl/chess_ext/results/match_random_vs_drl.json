@@ -1,0 +1,84 @@
+{
+  "agent_a": "random",
+  "agent_b": "drl",
+  "n_games": 10,
+  "a_wins": 0,
+  "b_wins": 10,
+  "draws": 0,
+  "a_winrate": 0.0,
+  "b_winrate": 1.0,
+  "avg_plies": 39.1,
+  "duration_s": 4.95108699798584,
+  "games": [
+    {
+      "white": "random",
+      "black": "drl",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 28
+    },
+    {
+      "white": "drl",
+      "black": "random",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 21
+    },
+    {
+      "white": "random",
+      "black": "drl",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 58
+    },
+    {
+      "white": "drl",
+      "black": "random",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 43
+    },
+    {
+      "white": "random",
+      "black": "drl",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 52
+    },
+    {
+      "white": "drl",
+      "black": "random",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 27
+    },
+    {
+      "white": "random",
+      "black": "drl",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 4
+    },
+    {
+      "white": "drl",
+      "black": "random",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 43
+    },
+    {
+      "white": "random",
+      "black": "drl",
+      "result": "0-1",
+      "termination": "checkmate",
+      "plies": 98
+    },
+    {
+      "white": "drl",
+      "black": "random",
+      "result": "1-0",
+      "termination": "checkmate",
+      "plies": 17
+    }
+  ]
+}

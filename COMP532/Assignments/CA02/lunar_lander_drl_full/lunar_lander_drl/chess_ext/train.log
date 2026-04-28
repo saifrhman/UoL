@@ -1,0 +1,19 @@
+[Game   20/300]  vs Random: 83.33%  vs Heuristic: 58.33%  buf=  837  eps=0.28  loss=0.4009
+  -> New best (combined=70.83%); saved.
+[Game   40/300]  vs Random: 75.00%  vs Heuristic: 25.00%  buf= 1542  eps=0.27  loss=0.2857
+[Game   60/300]  vs Random: 83.33%  vs Heuristic: 33.33%  buf= 2410  eps=0.25  loss=0.2653
+[Game   80/300]  vs Random: 91.67%  vs Heuristic: 25.00%  buf= 3355  eps=0.23  loss=0.2287
+[Game  100/300]  vs Random: 75.00%  vs Heuristic: 50.00%  buf= 4231  eps=0.22  loss=0.2147
+[Game  120/300]  vs Random: 91.67%  vs Heuristic: 25.00%  buf= 5145  eps=0.20  loss=0.1883
+[Game  140/300]  vs Random: 83.33%  vs Heuristic: 25.00%  buf= 6166  eps=0.18  loss=0.1733
+[Game  160/300]  vs Random: 91.67%  vs Heuristic: 50.00%  buf= 7120  eps=0.17  loss=0.1777
+[Game  180/300]  vs Random: 83.33%  vs Heuristic: 33.33%  buf= 8038  eps=0.15  loss=0.1872
+[Game  200/300]  vs Random: 83.33%  vs Heuristic: 33.33%  buf= 9058  eps=0.13  loss=0.1935
+[Game  220/300]  vs Random: 91.67%  vs Heuristic: 33.33%  buf=10070  eps=0.12  loss=0.1968
+[Game  240/300]  vs Random: 91.67%  vs Heuristic: 50.00%  buf=11005  eps=0.10  loss=0.1958
+[Game  260/300]  vs Random: 100.00%  vs Heuristic: 50.00%  buf=12088  eps=0.08  loss=0.2041
+  -> New best (combined=75.00%); saved.
+[Game  280/300]  vs Random: 91.67%  vs Heuristic: 41.67%  buf=13198  eps=0.07  loss=0.2092
+[Game  300/300]  vs Random: 91.67%  vs Heuristic: 50.00%  buf=14133  eps=0.05  loss=0.2214
+
+Done in 9.8 min. Best combined win-rate vs (Random+Heuristic)/2: 75.00%.

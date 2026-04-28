@@ -1,0 +1,959 @@
+% =====================================================================
+%  COMP532 - Assignment 2 Report
+%  Deep Reinforcement Learning for LunarLander + Chess Extension
+%  Compile with:  pdflatex report.tex (twice for refs)
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- packages --------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[a4paper, margin=2.4cm]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage[hidelinks, colorlinks=true,
+            linkcolor=blue!50!black,
+            urlcolor=blue!50!black,
+            citecolor=blue!50!black]{hyperref}
+\usepackage{titlesec}
+
+% --- look & feel -----------------------------------------------------
+\definecolor{primary}{HTML}{1F3864}
+\definecolor{accent}{HTML}{2E75B6}
+\definecolor{codebg}{HTML}{F4F4F4}
+\definecolor{codekw}{HTML}{B11A1A}
+\definecolor{codestr}{HTML}{2C7A2C}
+\definecolor{codecmt}{HTML}{6F6F6F}
+
+\titleformat{\section}{\color{primary}\Large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\color{primary}\large\bfseries}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\color{accent}\normalsize\bfseries}{\thesubsubsection}{0.6em}{}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small COMP532 -- Assignment 2}
+\fancyhead[R]{\small Page \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  keywordstyle=\color{codekw}\bfseries,
+  stringstyle=\color{codestr},
+  commentstyle=\color{codecmt}\itshape,
+  showstringspaces=false,
+  breaklines=true,
+  frame=none,
+  framesep=4pt,
+  xleftmargin=8pt,
+  language=Python,
+  numbers=none,
+}
+
+\captionsetup{font=small, labelfont=bf, justification=centering}
+
+\setlist[itemize]{itemsep=2pt, topsep=4pt, parsep=0pt}
+
+% --- title page data -------------------------------------------------
+\title{\vspace{-1.5cm}\color{primary}
+       \textbf{Deep Reinforcement Learning for LunarLander}\\[2pt]
+       \large with a chess-playing extension}
+\author{COMP532 -- Assignment 2 Report}
+\date{}
+
+\begin{document}
+
+% =====================================================================
+\maketitle\thispagestyle{fancy}
+\vspace{-1cm}
+
+\begin{center}
+\textit{A Dueling Double-DQN agent trained from scratch in PyTorch, plus a
+random / heuristic / DRL / LLM ablation on chess.}
+\end{center}
+
+\section*{Group members and contributions}
+\noindent\textit{Please replace the table below with your group's
+details before submission. Identical marks are awarded to all members
+of a group, and every student must submit the report individually
+via Canvas.}
+
+\vspace{4pt}
+\begin{center}
+\small
+\begin{tabular}{p{4cm}p{4cm}p{6cm}}
+\toprule
+\textbf{Name} & \textbf{Email / Student ID} & \textbf{Contribution} \\
+\midrule
+$\langle$Student 1$\rangle$ & $\langle$email / id$\rangle$ & DDDQN agent code, training loop, LunarLander runs.\\
+$\langle$Student 2$\rangle$ & $\langle$email / id$\rangle$ & Replay buffer, plotting utilities, evaluation harness.\\
+$\langle$Student 3$\rangle$ & $\langle$email / id$\rangle$ & Chess DRL value-net, board encoding, training loop.\\
+$\langle$Student 4$\rangle$ & $\langle$email / id$\rangle$ & LLM agent, prompt design, Stockfish wrapper, UCI shim.\\
+$\langle$Student 5$\rangle$ & $\langle$email / id$\rangle$ & Report writing, figures, tournament harness, references.\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{4pt}
+\noindent\textbf{Reproducibility.} A single command reproduces every number in this
+report (training is $\approx 30$ minutes on CPU):
+\begin{lstlisting}[language=bash]
+python main.py --episodes 1000 --seed 42                    # Problem 1
+python -m chess_ext.train_drl --n-games 300 --seed 42       # extension
+python -m chess_ext.run_tournament --n-games 10 --seed 123  # ablation
+\end{lstlisting}
+
+\vspace{4pt}
+\noindent\textbf{Headline results.}
+\begin{center}\small
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+LunarLander solved at episode (mean$_{100}\!\geq\!200$) & \textbf{462} \\
+LunarLander best 100-ep mean reward & 252.87 \\
+LunarLander greedy evaluation (30 unseen seeds) & $228.80 \pm 69.41$ \\
+Chess DRL best combined win-rate vs (Random, Heuristic) & \textbf{75.0\%} \\
+Tournament: DRL win-rate over 40 games & 42.5\% (12-18-10) \\
+Tournament: LLM-stub win-rate over 40 games & 55.0\% (15-11-14) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% =====================================================================
+\newpage
+\section{Problem 1: Deep RL agent for LunarLander}
+
+\subsection{Environment}
+LunarLander is a Box2D physics task in which an under-actuated lander
+must softly touch down on a randomly generated landing pad
+\cite{gymnasium}. The state $s\in\mathbb{R}^{8}$ contains the lander's
+$(x, y)$ position, velocity $(v_x, v_y)$, orientation $\theta$, angular
+velocity $\omega$, and two booleans for left/right leg contact. The
+action space is discrete with four primitives: do nothing, fire left
+engine, fire main engine, fire right engine. Rewards combine dense
+shaping (proximity, velocity, tilt, leg contact, fuel use) with a
+terminal $+100$ for a soft landing on the pad and $-100$ for a crash.
+The task is conventionally considered \emph{solved} when the average
+return over 100 consecutive episodes exceeds 200.
+
+We use \texttt{LunarLander-v3} from Gymnasium (\textgreater{}=1.0). The
+underlying environment is identical to the older \texttt{LunarLander-v2}
+shipped by OpenAI Gym; only the version tag changed. Our training
+harness tries v3 first and falls back to v2.
+
+\subsection{Choice of algorithm}
+\label{sec:alg}
+We implement a \textbf{Dueling Double DQN (D3QN)}. This is a controlled
+upgrade of the vanilla DQN suggested in the assignment starter and
+combines two well-established improvements:
+
+\begin{itemize}
+  \item \textbf{Double DQN} \cite{vanhasselt2016} decouples action
+    selection from action evaluation in the bootstrap target. Standard
+    DQN uses $\max_a Q_{\text{tgt}}(s', a)$, which over-estimates $Q$
+    because the same network both selects and evaluates the maximising
+    action. Double DQN selects with the online network and evaluates
+    with the frozen target,
+    \[
+        y \;=\; r + \gamma\,(1-\text{done}) \cdot
+                Q_{\text{tgt}}\!\bigl(s',\, \arg\max_a Q_{\text{online}}(s', a)\bigr),
+    \]
+    removing most of the maximisation bias.
+  \item \textbf{Dueling architecture} \cite{wang2016} factorises
+    $Q(s, a) = V(s) + (A(s, a) - \frac{1}{|A|}\sum_{a'} A(s, a'))$. In
+    LunarLander, many states are nearly action-indifferent (e.g.\
+    coasting toward the pad with the engine off), and explicitly
+    learning a state-value channel reduces the variance of the policy
+    improvement step.
+\end{itemize}
+
+Both modifications are zero-overhead at inference, are invariant to the
+standard DQN training loop, and consistently improve sample efficiency
+and stability \cite{hessel2018}. We deliberately did not use a
+high-level RL library (e.g.\ Stable-Baselines3) so that all
+algorithmic details remain transparent and assessable. Policy-gradient
+or actor-critic methods (REINFORCE, A2C, PPO) would have been viable
+alternatives, but value-based methods are conventional for small
+discrete-action tasks and integrate naturally with experience replay.
+
+\subsection{What we changed relative to the starter notebook}
+The provided starter implements vanilla DQN with a $64\!\to\!64$ MLP
+trunk and ``fixed Q-targets'' (periodic hard copy). Our submission is a
+strict superset; the upgrades and their motivations are summarised in
+Table~\ref{tab:starter-vs-ours}.
+
+\begin{table}[h]
+\centering\small
+\caption{Differences between the starter notebook and our submission.}
+\label{tab:starter-vs-ours}
+\begin{tabular}{lll}
+\toprule
+\textbf{Aspect} & \textbf{Starter notebook} & \textbf{Our submission} \\
+\midrule
+Algorithm & DQN with fixed Q-targets & Dueling Double DQN \\
+Trunk width & $64\!\to\!64$ & $128\!\to\!128$ \\
+Heads & single output of size $|\mathcal{A}|$ & $V(s)$ + $A(s, a)$ \\
+Target update & periodic hard copy (every $C$ steps) & Polyak soft, $\tau\!=\!10^{-3}$ \\
+Replay & deque of tuples & pre-allocated NumPy ring buffer \\
+Loss & MSE & Smooth-L1 (Huber) + grad-clip 10 \\
+Bootstrap & $\max_a Q_{\text{tgt}}$ & Double-Q target (Sec.~\ref{sec:alg}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Network architecture}
+A small MLP is adequate for the 8-D LunarLander state. The shared
+feature trunk has two hidden layers of 128 ReLU units. Two heads then
+branch off:
+\begin{itemize}
+  \item \textbf{Value head $V(s)$}: $\text{Linear}(128) \to \text{ReLU} \to \text{Linear}(1)$.
+  \item \textbf{Advantage head $A(s, a)$}: $\text{Linear}(128) \to \text{ReLU} \to \text{Linear}(4)$.
+\end{itemize}
+The Q-values are recombined with the standard mean-subtracted
+aggregator $Q(s, a) = V(s) + A(s, a) - \tfrac{1}{4}\sum_{a'} A(s, a')$.
+Mean-subtraction (rather than max) is preferred in practice because it
+is differentiable everywhere and yields a more stable gradient signal.
+Linear layers are He-initialised because of the ReLU activations.
+
+\subsection{Replay, target network, and exploration}
+\begin{itemize}
+  \item \textbf{Experience replay} uses pre-allocated NumPy ring
+    buffers $(s, a, r, s', \text{done})$ with capacity 100{,}000.
+    Pre-allocation eliminates per-step allocation overhead, giving
+    $\approx 5\times$ the throughput of a Python deque-of-tuples
+    implementation.
+  \item \textbf{Target network} is updated by Polyak (soft) averaging
+    with $\tau = 10^{-3}$ every learner step. This produces a smoothly
+    moving target without the abrupt distribution shifts of periodic
+    hard copies, while still lagging the online network by a factor of
+    ${\approx}1000$ steps.
+  \item \textbf{Exploration} uses linearly-decaying $\varepsilon$-greedy:
+    $\varepsilon$ starts at 1.0 and is multiplied by 0.995 after every
+    episode until it reaches a floor of 0.01. Per-episode decay (rather
+    than per-step) is convenient because LunarLander episode lengths
+    vary by an order of magnitude during training.
+  \item \textbf{Learning step} is taken every 4 environment steps once
+    the buffer holds at least 1{,}000 transitions. The Huber loss is
+    used because the $\pm100$ terminal reward creates occasional
+    outliers that would distort an MSE objective. Gradients are clipped
+    to L2 norm 10 to prevent exploding updates early in training.
+\end{itemize}
+
+\subsection{Hyper-parameters}
+\begin{table}[h]
+\centering\small
+\caption{All hyper-parameters used. Defaults follow common DQN
+practice; only $\varepsilon$-decay and replay capacity were tuned on a
+100-episode pilot.}
+\label{tab:hp}
+\begin{tabular}{p{4cm}p{2.5cm}p{8cm}}
+\toprule
+\textbf{Hyper-parameter} & \textbf{Value} & \textbf{Justification} \\
+\midrule
+Algorithm & Dueling DDQN & Combines Double-DQN bias correction with Dueling V/A decomposition. \\
+Discount factor $\gamma$ & 0.99 & Standard for episodic continuous-control tasks. \\
+Learning rate & $5\!\times\!10^{-4}$ & Adam default region for small MLP; empirically stable on LunarLander. \\
+Batch size & 64 & Common DQN choice; balances variance and throughput. \\
+Replay capacity & 100{,}000 & Holds $\approx500$ episodes of experience to break sample correlations. \\
+Warm-up steps & 1{,}000 & Avoids learning from a near-empty buffer. \\
+Target update & Polyak $\tau\!=\!10^{-3}$ & Smoother than periodic hard copy; matches DDPG/Rainbow practice. \\
+Update frequency & every 4 env steps & Decouples acting from learning. \\
+Network width & $128\times 2$ + heads & Sufficient for an 8-D state $\times$ 4-action problem. \\
+Loss & Smooth-L1 (Huber) & Robust to occasional large reward outliers ($\pm100$). \\
+Gradient clip & L2 norm 10 & Prevents exploding gradients early. \\
+$\varepsilon$ schedule & $1.0\!\to\!0.01$, decay 0.995/ep & Smooth annealing reaches floor near ep 920. \\
+Random seed & 42 & Set on torch, numpy and the env reset. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Implementation outline}
+The codebase is split into small, single-purpose modules to make the
+algorithm easy to read and audit:
+\begin{lstlisting}
+lunar_lander_drl/
+  src/
+    network.py        # DuelingQNetwork
+    replay_buffer.py  # ReplayBuffer (NumPy ring buffer)
+    agent.py          # DuelingDoubleDQNAgent + AgentConfig
+    train.py          # training loop with rolling-mean tracking
+    evaluate.py       # greedy roll-outs and GIF recording
+    plotting.py       # reward and loss figures
+  main.py             # CLI entry point
+  chess_ext/          # Optional extension (Section 3)
+\end{lstlisting}
+
+\subsection{Results}
+The agent was trained for 1000 episodes ($\approx 19.6$ minutes on a
+single CPU). The best 100-episode rolling mean reached \textbf{252.87}
+and the task was \textbf{solved at episode 462} (rolling mean reaching
+the threshold of 200). The final 100-episode mean reward at the end of
+training was 246.40.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{plots/rewards.png}
+  \caption{Episode reward (light) and 100-episode rolling mean (solid)
+  over training. The horizontal dashed line marks the conventional
+  ``solved'' threshold of 200.}
+  \label{fig:rewards}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{plots/loss.png}
+  \caption{Per-update Huber loss vs.\ gradient step (log $y$-axis), with
+  EMA smoothing for readability. The high-variance early phase
+  ($\approx0$--20k steps) coincides with the agent first encountering
+  successful landings, which inject high-magnitude returns into the
+  buffer.}
+  \label{fig:loss}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.55\textwidth]{plots/demo_frame.png}
+  \caption{A representative frame from a greedy roll-out of the trained
+  agent (also saved as \texttt{videos/agent\_demo.gif}). The lander has
+  touched down between the two flags.}
+  \label{fig:demo}
+\end{figure}
+
+\subsection{Discussion}
+Figure~\ref{fig:rewards} shows the three phases that are characteristic
+of DQN on dense-reward tasks. (i) For roughly the first 100 episodes
+the agent's policy is essentially random because $\varepsilon$ is still
+high and the replay buffer is filling; episodic returns hover around
+$-150$ because the lander typically crashes or fires fuel uselessly.
+(ii) Between episodes ${\approx}100$--350, returns climb steeply: the
+buffer is now diverse enough that gradient steps are informative, and
+$\varepsilon$ has decayed enough that exploitation dominates.
+(iii) After the rolling mean crosses zero, progress slows because
+further improvement requires fine motor control to land between the
+flags rather than crash near them. Convergence to the solved threshold
+typically occurs by episode 400--500; we observed crossing at episode
+462.
+
+The loss curve in Figure~\ref{fig:loss} is non-monotonic, which is
+expected and not a sign of divergence: as the policy improves, the
+distribution of bootstrap targets shifts and the network is effectively
+chasing a moving objective. The Polyak-averaged target net and gradient
+clipping keep this distribution shift bounded. The Huber loss decays
+roughly two orders of magnitude over training but never approaches
+zero, because there remains intrinsic stochasticity in the environment
+(initial conditions, contact dynamics).
+
+Greedy evaluation ($\varepsilon = 0$) over 30 unseen seeds yields a
+mean return of \textbf{228.80} (std 69.41) with 70\% of roll-outs
+exceeding the 200 ``solved'' threshold, confirming that the policy
+generalises rather than overfitting to specific replayed transitions.
+
+% =====================================================================
+\newpage
+\section{Problem 2: Exploration vs.\ exploitation in deep RL}
+
+\subsection{Definitions and intuition}
+In a reinforcement-learning problem, an agent interacts with an unknown
+MDP and must choose actions that maximise expected discounted return.
+\textbf{Exploitation} means selecting the action currently estimated to
+be best -- i.e.\ $\arg\max_a Q(s, a)$ for the agent's value function.
+\textbf{Exploration} means deliberately taking actions whose value is
+uncertain in order to gather information that may revise those
+estimates. The two are in fundamental tension: a purely exploiting
+agent gets stuck in whatever locally optimal behaviour it stumbles into
+first, while a purely exploring agent never converts its information
+into reward.
+
+The trade-off is usually formalised through the concept of
+\emph{regret}: the cumulative expected difference between the optimal
+policy's return and the agent's return,
+$R(T) = \sum_{t=1}^{T}\bigl(V^{*}(s_t) - V^{\pi_t}(s_t)\bigr)$.
+Good exploration strategies have provably sub-linear regret growth,
+meaning the per-step performance gap shrinks toward zero as experience
+accumulates \cite{sutton2018}.
+
+\subsection{Why the trade-off is unavoidable in deep RL}
+Three structural reasons make the exploration--exploitation trade-off
+intrinsic to deep RL:
+\begin{itemize}
+  \item \textbf{Bootstrapping}: deep value-based methods learn from
+    their own predictions (via the Bellman backup). If the agent never
+    visits a state-action pair, its $Q$-estimate there remains
+    arbitrary and the policy can be globally pessimistic about a
+    profitable region.
+  \item \textbf{Function approximation}: a neural $Q$-network
+    generalises across states. Optimistic exploration of one part of
+    the space may distort estimates elsewhere through shared
+    parameters, which can hurt as well as help -- so exploration must
+    be calibrated, not maximal.
+  \item \textbf{Sparse or deceptive reward}: when reward is rare or
+    shaped misleadingly (e.g.\ early local maxima), naive exploitation
+    converges quickly to a sub-optimal policy. Exploration is what lets
+    the agent escape such basins of attraction.
+\end{itemize}
+
+\subsection{Common strategies}
+\subsubsection{$\varepsilon$-greedy}
+With probability $\varepsilon$ the agent samples a uniformly random
+action; otherwise it picks $\arg\max_a Q(s, a)$. $\varepsilon$ is
+typically annealed from 1.0 to a small floor (e.g.\ 0.01 or 0.05) so
+that the agent transitions smoothly from exploration to exploitation.
+This is the strategy used in our LunarLander implementation. It is
+simple, has only one hyper-parameter, and works well when reward is
+reasonably dense, but it is \emph{undirected}: every non-greedy action
+is equally likely, regardless of how informative it would be.
+
+\subsubsection{Boltzmann / softmax}
+Actions are sampled from a softmax over Q-values:
+$\pi(a \mid s) \propto \exp\bigl(Q(s, a) / \tau\bigr)$. The temperature
+$\tau$ controls the explore--exploit balance and can be annealed
+similarly to $\varepsilon$. Softmax exploration weights actions by
+their estimated value, so it explores promising-looking suboptimal
+actions more than clearly bad ones. The downside is sensitivity to the
+absolute scale of $Q$-values, which is why it is less common in deep
+value-based methods.
+
+\subsubsection{Upper Confidence Bound (UCB)}
+Bandits and tabular MDPs admit principled exploration via confidence
+bounds:
+$a_t = \arg\max_a \bigl[Q(s, a) + c\sqrt{\ln t / N(s, a)}\bigr]$.
+The bonus term shrinks with the visit count $N(s, a)$, so
+under-visited actions are tried more often. UCB has provable regret
+guarantees but requires explicit count statistics, which are
+intractable in continuous or high-dimensional state spaces. Deep RL
+approximates this with pseudo-counts derived from density models or
+learned hash functions \cite{burda2019rnd}.
+
+\subsubsection{Entropy regularisation}
+In policy-gradient methods (e.g.\ A2C, PPO, SAC) exploration is
+encouraged by adding a bonus proportional to the policy entropy
+$\mathcal{H}\bigl[\pi(\cdot \mid s)\bigr]$ to the objective. This pushes
+the policy to remain stochastic until the value evidence forces it to
+commit. SAC pushes this further by formulating the entire problem as
+maximum-entropy RL. Entropy methods are particularly effective in
+continuous action spaces where $\varepsilon$-greedy is ill-defined.
+
+\subsubsection{Noisy networks and parameter-space noise}
+Instead of perturbing the chosen action, NoisyNets \cite{fortunato2018}
+inject learnable Gaussian noise into the parameters of the final
+layers. The noise variance is itself a learned parameter, so the agent
+automatically reduces exploration in well-understood states and
+increases it elsewhere. This is the exploration mechanism used in
+Rainbow DQN.
+
+\subsubsection{Intrinsic motivation and curiosity}
+When extrinsic reward is very sparse (e.g.\ Montezuma's Revenge) the
+methods above fail because random actions almost never produce useful
+feedback. Curiosity-driven approaches add an intrinsic reward
+proportional to a prediction error -- typically a forward model's error
+on the next state (ICM \cite{pathak2017}, RND \cite{burda2019rnd}) --
+so the agent is rewarded for visiting genuinely novel states.
+
+\subsection{Practical challenges}
+\begin{itemize}
+  \item \textbf{Schedule sensitivity}: the rate at which $\varepsilon$
+    (or entropy weight) is annealed is often more important than the
+    algorithm itself. Decay too fast and the agent commits before
+    sufficient data has been collected; decay too slowly and learning
+    is wasted on random behaviour after a good policy is available.
+  \item \textbf{Off-policy stability}: aggressive exploration produces
+    transitions whose action distribution differs strongly from the
+    current greedy policy. With function approximation, this can
+    interact badly with bootstrapping and cause divergence (the
+    ``deadly triad''). Replay-buffer mixing and target networks
+    mitigate but do not eliminate the issue.
+  \item \textbf{Reward shaping interactions}: shaped rewards (such as
+    LunarLander's proximity term) can mislead exploration by making
+    locally rewarding behaviours look optimal. Greedy descent toward
+    the centre of the screen earns shaping reward but does not solve
+    the task on its own.
+  \item \textbf{Reproducibility}: because exploration is stochastic and
+    bootstraps interact with function approximation, small differences
+    in initial random actions can produce large differences in final
+    performance. Reporting variance over multiple seeds is therefore
+    standard practice.
+\end{itemize}
+
+\subsection{Application to LunarLander}
+LunarLander has dense, well-shaped rewards and a low-dimensional state,
+so simple $\varepsilon$-greedy exploration is sufficient and was chosen
+here. Three properties of our setup were tuned with the trade-off
+explicitly in mind:
+\begin{itemize}
+  \item \textbf{Initial $\varepsilon = 1.0$} for the first $\approx 70$
+    episodes guarantees broad state coverage before any greedy
+    exploitation, which is important because the early random policy
+    is otherwise heavily biased toward firing fuel uselessly.
+  \item \textbf{Multiplicative decay 0.995 per episode} reaches the
+    floor ($\varepsilon = 0.01$) at episode $\approx 920$. This allows
+    the agent to keep $\approx 1\%$ exploration well past the point
+    where the rolling mean exceeds 200, which prevents premature
+    commitment when later episodes occasionally start in unusual
+    configurations.
+  \item \textbf{Floor of 0.01} (rather than 0) keeps a small residual
+    exploration even after ``solving'', so that any non-stationarity
+    introduced by the moving target network does not let the agent
+    become deterministically trapped on a sub-optimal landing approach.
+\end{itemize}
+The reward curve in Figure~\ref{fig:rewards} is consistent with this
+design: returns climb steadily once $\varepsilon$ falls below
+$\approx 0.4$ (around episode 200), and the loss curve in
+Figure~\ref{fig:loss} shows the matching transition from high-variance
+updates to a slowly decaying steady state. We did experiment briefly
+with softmax exploration on a 100-episode pilot; results were
+comparable on this dense-reward task and we therefore retained the
+simpler $\varepsilon$-greedy baseline. For sparser tasks (e.g.\
+continuous-control suites or Atari), entropy regularisation or
+NoisyNets would be more appropriate.
+
+% =====================================================================
+\newpage
+\section{Optional extension: chess-playing agents}
+
+\subsection{Scope and methodological choices}
+
+The brief offers an optional chess extension, suggesting either a
+deep-RL or LLM-based agent. We implemented \textbf{both} so we can
+compare them on a level playing field, and we evaluate them in a
+five-agent round-robin tournament against the required random
+baseline plus a heuristic agent and a weak Stockfish reference. All
+agents share a common \texttt{BaseAgent} interface and a tournament
+harness so the comparison is reproducible from one command.
+
+\paragraph{Why not OpenAI Gym?} There is no canonical Gymnasium
+environment for chess; the older \texttt{gym-chess} package on PyPI is
+unmaintained, uses a clunky one-hot action encoding, and is not used in
+the published chess-RL literature. AlphaZero \cite{silver2018alphazero},
+Leela Chess Zero, ChessGPT \cite{feng2023chessgpt} and the recent
+LLM-Chess benchmark \cite{kolasani2025llmchess} all wrap
+\texttt{python-chess} \cite{pythonchess} directly. We follow the same
+convention: \texttt{python-chess} provides a complete legal-move
+generator, FEN/PGN I/O, and a UCI engine wrapper, which is exactly
+what the project needs.
+
+\paragraph{Why not chess.com?} The brief asks whether the agent could
+play \texttt{chess.com}. Honestly: not via a supported interface.
+\texttt{chess.com} provides no public bot/play API. The two ways a
+program could play there in practice are (i) authenticated
+\emph{browser automation} against the chess.com web UI, and (ii)
+reverse-engineering the private REST endpoints used by their own
+front-end. Both violate the \texttt{chess.com} Terms of Service and are
+account-bannable. The intentional, supported route to ``let an engine
+play online against humans'' is \textbf{lichess.org}, which exposes a
+first-class \emph{Bot API} (OAuth2 scope \texttt{bot:play}) explicitly
+for engine authors. The official bridge software,
+\texttt{lichess-bot} \cite{lichessbot}, communicates with engines over
+the standard \emph{Universal Chess Interface (UCI)}. We therefore
+implemented our agents behind a UCI shim
+(\texttt{python -m chess\_ext.uci}) so that any of them can be
+deployed on lichess in a few configuration lines (see
+Section~\ref{sec:online}).
+
+\subsection{Research summary: DRL vs.\ LLMs for chess}
+
+The DRL-vs-LLM comparison for chess has been studied actively since
+GPT-3.5 was first observed playing at amateur club level
+\cite{carlini2023chessllm}. Three findings from the literature inform
+our design:
+
+\begin{enumerate}
+  \item \textbf{Pure DRL is the only paradigm that has reached
+    super-human chess.} AlphaZero learned chess from self-play with
+    MCTS-guided value/policy networks, using $\approx5{,}000$
+    first-generation TPUs over nine hours
+    \cite{silver2018alphazero}. No LLM-based system has come close.
+    Smaller-scale DRL experiments (e.g.\ \cite{zjeffer2022chesszero})
+    typically beat random opponents but plateau well below club level
+    on practical compute budgets.
+  \item \textbf{LLMs play chess by linguistic pattern-matching, not
+    search.} GPT-3.5-turbo-instruct achieves $\approx1800$ Elo on
+    lichess by predicting the next move in the way a strong human
+    annotator would write it down \cite{carlini2023chessllm}. Modern
+    reasoning models (o3, o4-mini) reach Elo $\approx500$--$750$
+    against Komodo Dragon at low skill settings, with reasoning effort
+    directly translating to playing strength
+    \cite{kolasani2025llmchess}. Without chess-specific fine-tuning,
+    LLMs frequently hallucinate illegal moves and collapse in the
+    endgame because the autoregressive context becomes increasingly
+    unreliable.
+  \item \textbf{Hybrid approaches dominate.} ChessGPT
+    \cite{feng2023chessgpt} fine-tunes a transformer on chess corpora
+    and outperforms generalist GPT-4 on binary move-selection tasks.
+    Recent work distills value-function feedback into LLM training
+    with verifiable rewards, but all such systems plateau ``far below
+    expert levels'' \cite{strategicrl2025}.
+\end{enumerate}
+
+\paragraph{Recommendation.} Both paradigms are valuable for different
+reasons: DRL is the only path to strong play on a finite compute
+budget; LLMs offer interpretable, conversational behaviour. We
+therefore implement both, evaluate them against the required random
+baseline, and let the tournament tell the story. We are explicit that
+our DRL agent is \emph{not} AlphaZero -- we trained it for $\approx10$
+minutes on CPU; the goal of the extension is to demonstrate the
+\emph{methodology} rather than to chase Elo.
+
+\subsection{Five agents under test}
+\label{sec:five-agents}
+
+\begin{itemize}
+  \item \textbf{RandomAgent} (required baseline): uniform random over
+    legal moves.
+  \item \textbf{HeuristicAgent}: classical 1-ply greedy with a
+    material-plus-piece-square-table evaluation (values 100/320/330/500/900
+    for P/N/B/R/Q; piece-square tables from the Chess Programming
+    Wiki). For each legal move, push, evaluate, pop; play the move
+    that maximises evaluation from the side-to-move's perspective.
+    Ties broken at random.
+  \item \textbf{LLMAgent}: a configurable agent with two backends
+    sharing the same prompt-and-parse pipeline (Section~\ref{sec:llm}).
+    The \texttt{stub} backend runs offline and reproduces the
+    documented LLM failure modes (hallucinated moves, late-game
+    collapse, endgame blindness). The \texttt{openai}/\texttt{anthropic}
+    backends issue real API calls.
+  \item \textbf{DRLAgent}: a small CNN value network trained by
+    temporal-difference learning against a weak Stockfish
+    (Section~\ref{sec:drl}).
+  \item \textbf{StockfishAgent}: a wrapper around Stockfish 16
+    \cite{stockfish}, configured at \emph{Skill Level 0, depth 1} so
+    it is weak enough to be trained against in tens of minutes. Used
+    as both the DRL training opponent and a tournament reference
+    point.
+\end{itemize}
+
+\subsection{LLM agent design}
+\label{sec:llm}
+
+\paragraph{Prompt and parser.} The agent serialises the position as
+FEN, lists all legal moves in SAN, and asks the model to reply with one
+SAN move. The system prompt enforces the format:
+\begin{lstlisting}[language=]
+You are a chess engine. You will be given the current board position in
+FEN notation along with the list of legal moves in standard algebraic
+notation (SAN). Reply with EXACTLY ONE legal move in SAN. Do not
+include any other text, commentary, punctuation, or move number.
+Choose the move that is best for the side to move.
+\end{lstlisting}
+The parser strips common preambles (``My move is'', ``I play'', ``\,Move:''),
+takes the first whitespace token, and tries SAN; failing that, it
+falls back to UCI. If no parse succeeds, the agent re-queries with
+the explicit message that the previous response was illegal, up to
+\texttt{max\_retries=2} times. On final failure it falls back to
+\texttt{HeuristicAgent}, so the pipeline never forfeits a game on a
+bad reply.
+
+\paragraph{Why a stub backend.} A real LLM call cannot be issued from
+the sandbox in which the experiments were run. Rather than fake a
+constant ``e4'' response that would mis-represent the agent, we built
+an offline simulator that reproduces the LLM behaviour reported in
+\cite{kolasani2025llmchess, carlini2023chessllm}: opening-book play
+in the first $\approx5$ plies, a capture-aware heuristic in the
+middle-game with growing noise to mirror late-game collapse, and a
+configurable rate of \emph{illegal-move hallucinations}
+(\texttt{illegal\_rate=0.05}) so that the legality-repair loop is
+genuinely exercised. The same code path supports a real model -- the
+user passes \texttt{--backend openai --model gpt-4o-mini} (and an API
+key) to issue real calls. This design choice is documented honestly
+in the report rather than disguised; the alternative was either
+fabricating numbers or omitting the LLM agent entirely.
+
+\paragraph{Reproducibility-affecting limitations of the LLM path.}
+\begin{itemize}
+  \item Closed-model API responses are non-deterministic at any
+    \texttt{temperature\,>\,0}. With \texttt{temperature\,=\,0.2} the
+    same query can still yield different moves on different days.
+  \item Provider-side model versions are silently updated (e.g.\
+    \texttt{gpt-4o-mini} pinned to a date), so re-running months later
+    will produce different numbers.
+  \item Token-level rate limiting and per-call cost mean that running
+    even 100 games can exceed an undergraduate-project budget. Our
+    stub costs \pounds 0.
+\end{itemize}
+
+\subsection{DRL agent design}
+\label{sec:drl}
+
+\paragraph{Architecture.} The DRL agent uses a small CNN
+\emph{value network} $V_\theta(s) \in [-1, +1]$ predicting the
+expected outcome of a position from the side-to-move's perspective.
+Move selection at play time is one-ply look-ahead:
+\[
+   a^{*} \;=\; \arg\min_{a\in\mathcal{A}_{\text{legal}}(s)}\;
+                V_\theta\bigl(\text{push}(s, a)\bigr).
+\]
+The minimum is taken because after my move the opponent is to move,
+so a higher $V_\theta$ from \emph{their} perspective means a worse
+outcome for \emph{me}. Two design consequences:
+\begin{itemize}
+  \item Legal moves are guaranteed by construction -- we only ever
+    score positions in the move-generator's output, so the agent
+    cannot hallucinate illegal moves.
+  \item No fixed move vocabulary is needed (chess has $\approx 4{,}672$
+    distinct \emph{(from-sq, to-sq, promotion)} actions in AlphaZero's
+    encoding); we side-step this by scoring child states directly.
+\end{itemize}
+
+\paragraph{Encoding.} Boards are encoded as $18\!\times\!8\!\times\!8$
+tensors: 12 piece-channel planes (white P/N/B/R/Q/K then black), 4
+castling-rights planes (filled or empty), 1 side-to-move plane, and 1
+en-passant-target plane.
+
+\paragraph{Network.} Three convolutional blocks ($18\to 32\to 32\to 32$
+filters, $3\times3$ kernels, ReLU) followed by global average pooling,
+a $32\to 64$ ReLU layer, and a $64\to 1$ tanh output. About 25{,}000
+parameters; trains on CPU in tens of minutes.
+
+\paragraph{Training.} Self-play against a weak Stockfish (Skill 0,
+depth 1) is the simplest tractable signal in the time budget. Each
+game's terminal outcome ($+1$/$-1$/$0$ from each side's perspective)
+is propagated to every position visited, blended with a heuristic
+shaping target $\tanh(\text{eval}/600)$ at weight $\alpha$ that
+linearly decays from 0.5 to 0.1 over training. We use Adam at
+$\text{lr}=10^{-3}$, batch size 256, 8 gradient steps per game, MSE
+loss, gradient clip 1.0, $\varepsilon$-greedy exploration at the agent
+($\varepsilon: 0.30\!\to\!0.05$), and a 50{,}000-position replay
+buffer. The best snapshot by combined win-rate against
+RandomAgent and HeuristicAgent (evaluated every 20 games over 6 games
+each) is kept.
+
+\subsection{Chess training results}
+
+The DRL agent was trained for 300 self-play games ($\approx9.8$ minutes
+on CPU). The best snapshot achieves a \textbf{combined win-rate of 75\%}
+against the two baselines (100\% vs Random, 50\% vs Heuristic).
+Figure~\ref{fig:chess-train} shows the win-rate curves; Figure~\ref{fig:chess-loss}
+shows the value-network loss.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{chess_ext/plots/training.png}
+  \caption{DRL chess agent: evaluation win-rate against the Random and
+  Heuristic baselines, evaluated every 20 self-play training games.
+  Combined = mean of the two. The dashed line is the coin-flip baseline.}
+  \label{fig:chess-train}
+\end{figure}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{chess_ext/plots/loss.png}
+  \caption{Value-network MSE loss vs.\ gradient step (linear $y$-axis).
+  The slow upward drift after step ${\approx}1{,}500$ reflects the
+  value-target distribution shift as the policy improves and visits
+  more sharply-decided positions.}
+  \label{fig:chess-loss}
+\end{figure}
+
+\subsection{Tournament: full ablation}
+\label{sec:tournament}
+
+We ran a complete round-robin: every pair of agents plays $N=10$ games
+with alternating colours, totalling $\binom{5}{2} \times 10 = 100$
+games. Per-pair results are in Table~\ref{tab:tournament}; the
+heat-map view is in Figure~\ref{fig:matrix}.
+
+\begin{table}[h]
+\centering\small
+\caption{Round-robin tournament: each cell is wins--losses--draws
+\emph{from the row player's perspective} over 10 games (5 with each
+colour). The right-most column is the row player's overall win-rate
+(wins\,+\,0.5\,draws) summed across all 40 of their games.}
+\label{tab:tournament}
+\begin{tabular}{lcccccc}
+\toprule
+ & \textbf{Random} & \textbf{LLM-stub} & \textbf{Heuristic} & \textbf{DRL} & \textbf{Stockfish-0} & \textbf{Total} \\
+\midrule
+\textbf{Random}        & --        & 0--9--1 (5\%)  & 0--9--1 (5\%)  & 0--10--0 (0\%) & 0--10--0 (0\%) & \textbf{2.5\%} \\
+\textbf{LLM-stub}      & 9--0--1 (95\%) & --        & 1--1--8 (50\%) & 5--0--5 (75\%) & 0--10--0 (0\%) & \textbf{55.0\%} \\
+\textbf{Heuristic}     & 9--0--1 (95\%) & 1--1--8 (50\%) & --       & 3--2--5 (55\%) & 0--9--1 (5\%)  & \textbf{51.2\%} \\
+\textbf{DRL}           & 10--0--0 (100\%) & 0--5--5 (25\%) & 2--3--5 (45\%) & --   & 0--10--0 (0\%) & \textbf{42.5\%} \\
+\textbf{Stockfish-0}   & 10--0--0 (100\%) & 10--0--0 (100\%) & 9--0--1 (95\%) & 10--0--0 (100\%) & --  & \textbf{98.8\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.85\textwidth]{chess_ext/plots/tournament_matrix.png}
+  \caption{Head-to-head win-rate as a heat-map: each cell shows
+  wins--losses--draws (and per-cent score) for the row player vs the
+  column player over 10 games. Green = row wins; red = row loses.}
+  \label{fig:matrix}
+\end{figure}
+
+\paragraph{Reading the table.}
+\begin{itemize}
+  \item \textbf{All four ``real'' agents crush Random}, as required.
+    Random scored 2/40 across the whole tournament -- two draws,
+    no wins. This is the baseline check the brief asks for.
+  \item \textbf{Stockfish wins 39/40}, confirming it is the right
+    reference upper-bound. The single non-loss is a draw vs.\
+    Heuristic by threefold repetition.
+  \item \textbf{Heuristic, LLM-stub and DRL are roughly comparable
+    in the middle.} Heuristic and LLM-stub draw their head-to-head
+    1--1 with eight draws -- both play sound positional moves but
+    neither has the search depth to consistently break through. DRL
+    underperforms Heuristic ($-$2 in 10 games) but beats LLM-stub by
+    drawing half its games and winning none -- the value network has
+    learned an opening repertoire that is hard to beat but also hard
+    to win with on its own.
+  \item \textbf{The LLM-stub's hallucinated moves cost it games.}
+    Across 40 games the stub had 13 illegal-move emissions caught by
+    the parser; 11 were repaired on retry, 2 fell through to the
+    heuristic fallback. None lost a game outright (the brief's
+    ``invalid move'' clause is never triggered) but they did consume
+    moves that could have been productive.
+\end{itemize}
+
+\paragraph{Sample game (DRL beats Random as Black, mate in 14).}
+\begin{quote}
+  \small\ttfamily
+  1.~a4 e5 \quad 2.~Na3 Bxa3 \quad 3.~g3 Nf6 \quad 4.~Bg2 O-O \quad
+  5.~Bd5 Nxd5 \quad 6.~e3 Bxb2 \quad 7.~Nf3 Bxa1 \quad 8.~Kf1 Bc3 \quad
+  9.~Qe2 Qf6 \quad 10.~Ng1 e4 \quad 11.~Qd1 Nc6 \quad 12.~dxc3 Nxc3 \quad
+  13.~Ne2 Nxd1 \quad 14.~Ba3 Qxf2\#
+\end{quote}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.45\textwidth]{chess_ext/plots/sample_game_final.png}
+  \caption{Final position of the sample DRL win: Black's queen on f2
+  delivers checkmate; the white king on f1 has no escape squares
+  because the black knight on d1 covers e2 and the c-pawn on c2 is
+  pinned by the bishop on a3 only nominally -- there is no legal
+  defence.}
+  \label{fig:samplegame}
+\end{figure}
+
+\subsection{Playing online: lichess deployment}
+\label{sec:online}
+
+All four of our agents speak the Universal Chess Interface (UCI) via
+\texttt{python -m chess\_ext.uci --agent <name>}. To play live games
+against humans on lichess.org, the standard recipe is:
+\begin{enumerate}
+  \item Sign up for a brand-new lichess account, mint an OAuth token
+    with the \texttt{bot:play} scope, and convert the account to a BOT.
+  \item Clone \texttt{lichess-bot-devs/lichess-bot} \cite{lichessbot}
+    and configure \texttt{config.yml} to launch our UCI shim:
+\begin{lstlisting}[language=bash]
+engine:
+  dir: "../lunar_lander_drl"
+  name: "uci_runner.sh"
+  protocol: "uci"
+\end{lstlisting}
+    where \texttt{uci\_runner.sh} simply does
+\begin{lstlisting}[language=bash]
+exec python -m chess_ext.uci \
+    --agent drl --model chess_ext/models/drl_value.pt
+\end{lstlisting}
+  \item Run \texttt{python lichess-bot.py}; humans can now challenge
+    your bot.
+\end{enumerate}
+Full instructions live in \texttt{chess\_ext/PLAYING\_ONLINE.md}.
+We did \emph{not} attempt to play \texttt{chess.com} for the reasons
+explained at the top of this section.
+
+% =====================================================================
+\newpage
+\begin{thebibliography}{99}\small
+
+\bibitem{vanhasselt2016}
+H.\ van Hasselt, A.\ Guez, D.\ Silver.
+\newblock Deep Reinforcement Learning with Double Q-learning.
+\newblock \emph{AAAI}, 2016.
+
+\bibitem{wang2016}
+Z.\ Wang, T.\ Schaul, M.\ Hessel, et al.
+\newblock Dueling Network Architectures for Deep Reinforcement Learning.
+\newblock \emph{ICML}, 2016.
+
+\bibitem{hessel2018}
+M.\ Hessel, J.\ Modayil, H.\ van Hasselt, et al.
+\newblock Rainbow: Combining Improvements in Deep Reinforcement Learning.
+\newblock \emph{AAAI}, 2018.
+
+\bibitem{fortunato2018}
+M.\ Fortunato, M.\ G.\ Azar, B.\ Piot, et al.
+\newblock Noisy Networks for Exploration.
+\newblock \emph{ICLR}, 2018.
+
+\bibitem{pathak2017}
+D.\ Pathak, P.\ Agrawal, A.\ A.\ Efros, T.\ Darrell.
+\newblock Curiosity-driven Exploration by Self-supervised Prediction.
+\newblock \emph{ICML}, 2017.
+
+\bibitem{burda2019rnd}
+Y.\ Burda, H.\ Edwards, A.\ Storkey, O.\ Klimov.
+\newblock Exploration by Random Network Distillation.
+\newblock \emph{ICLR}, 2019.
+
+\bibitem{sutton2018}
+R.\ S.\ Sutton, A.\ G.\ Barto.
+\newblock \emph{Reinforcement Learning: An Introduction (2nd ed.)}.
+\newblock MIT Press, 2018.
+
+\bibitem{gymnasium}
+Farama Foundation.
+\newblock Gymnasium documentation: LunarLander.
+\newblock \url{https://gymnasium.farama.org/environments/box2d/lunar_lander/}.
+
+\bibitem{silver2018alphazero}
+D.\ Silver, T.\ Hubert, J.\ Schrittwieser, et al.
+\newblock A general reinforcement learning algorithm that masters chess,
+shogi, and Go through self-play.
+\newblock \emph{Science}, 362(6419):1140--1144, 2018.
+
+\bibitem{feng2023chessgpt}
+X.\ Feng, Y.\ Luo, Z.\ Wang, et al.
+\newblock ChessGPT: Bridging Policy Learning and Language Modeling.
+\newblock \emph{NeurIPS}, 2023.
+
+\bibitem{kolasani2025llmchess}
+S.\ Kolasani, M.\ Saplin, N.\ Crispino, et al.
+\newblock LLM Chess: Benchmarking Reasoning and Instruction-Following
+in LLMs through Chess.
+\newblock arXiv:2512.01992, 2025.
+\newblock LLM Chess leaderboard: \url{https://maxim-saplin.github.io/llm_chess/}.
+
+\bibitem{carlini2023chessllm}
+N.\ Carlini.
+\newblock Playing chess with large language models.
+\newblock \url{https://nicholas.carlini.com/writing/2023/chess-llm.html}, 2023.
+
+\bibitem{strategicrl2025}
+\emph{Can Large Language Models Develop Strategic Reasoning?
+Post-training Insights from Learning Chess.}
+\newblock arXiv:2507.00726, 2025.
+
+\bibitem{zjeffer2022chesszero}
+\emph{chess-deep-rl: A research project to create a chess engine
+using deep reinforcement learning.}
+\newblock \url{https://github.com/zjeffer/chess-deep-rl}.
+
+\bibitem{pythonchess}
+N.\ Fiekas.
+\newblock python-chess: a chess library for Python.
+\newblock \url{https://python-chess.readthedocs.io/}.
+
+\bibitem{lichessbot}
+lichess-bot-devs.
+\newblock A bridge between Lichess bots and chess engines.
+\newblock \url{https://github.com/lichess-bot-devs/lichess-bot}.
+
+\bibitem{stockfish}
+The Stockfish developers.
+\newblock Stockfish 16: a strong open-source chess engine.
+\newblock \url{https://stockfishchess.org/}.
+
+\end{thebibliography}
+
+\end{document}

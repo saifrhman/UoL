@@ -1,0 +1,15 @@
+# Problem 1 (LunarLander)
+gymnasium>=1.0
+gymnasium[box2d]
+torch>=2.0
+numpy>=1.24
+matplotlib>=3.7
+imageio>=2.30
+Pillow>=10.0
+
+# Chess extension
+python-chess>=1.11
+
+# Optional: real LLM backends for the LLMAgent (otherwise stub backend works offline)
+# openai>=1.40
+# anthropic>=0.40

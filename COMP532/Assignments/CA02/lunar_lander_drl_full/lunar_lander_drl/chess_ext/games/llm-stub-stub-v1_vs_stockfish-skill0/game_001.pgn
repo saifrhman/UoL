@@ -1,0 +1,9 @@
+[Event "COMP532 chess extension"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "llm-stub-stub-v1"]
+[Black "stockfish-skill0"]
+[Result "0-1"]
+
+1. e4 e6 2. d4 Bb4+ 3. Nc3 d6 4. Nf3 h6 5. g3 a6 6. Bxa6 Nxa6 7. Bxh6 Nxh6 8. O-O Bxc3 9. bxc3 b6 10. Ne5 Bd7 11. Nxd7 Qxd7 12. Qf3 Qd8 13. Qxf7+ Kxf7 14. c4 c5 15. dxc5 Nxc5 16. Rfe1 Ra4 17. Rad1 Rxa2 18. Rxd6 Qxd6 19. e5 Qc6 20. g4 Nxg4 21. Rd1 Nxe5 22. Rd7+ Ncxd7 23. c5 Ra1# 0-1
