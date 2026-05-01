@@ -1,0 +1,15 @@
+\begin{table}
+\caption{Locomotion quality.}
+\label{tab:humanoid_locomotion}
+\begin{tabular}{lrrrrr}
+\toprule
+Algorithm & Torso z (m) & x-vel (m/s) & $\|\Delta a\|_2$ & $\|a\|^2$ & Eff. (ret/1M) \\
+\midrule
+CrossQ & 1.236 & 0.148 & 1.073 & 1.042 & 5288.062 \\
+TQC & 1.229 & 0.067 & 1.396 & 1.217 & 5037.944 \\
+SAC & 1.230 & 0.039 & 1.390 & 1.206 & 5009.673 \\
+PPO & 1.252 & -0.070 & 5.750 & 17.009 & 4849.613 \\
+TD3 & 1.236 & 0.026 & 0.835 & 1.847 & 4943.871 \\
+\bottomrule
+\end{tabular}
+\end{table}
