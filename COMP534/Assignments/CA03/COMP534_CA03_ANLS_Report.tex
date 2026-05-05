@@ -76,7 +76,7 @@ are padded to the longest sequence in the batch, with explicit boolean masks
 \texttt{pack\_padded\_sequence} for RNNs and key-padding masks in MHSA. The
 class distribution is severely skewed (\texttt{I-NP}/\texttt{B-NP} together
 $\approx39\%$ of tokens; \texttt{B-INTJ}/\texttt{B-CONJP} occur ${<}20$ times),
-motivating macro-F1 and Cohen's~$\kappa$ in §3.
+motivating macro-F1 and Cohen's~$\kappa$~\citep{Cohen1960} in the Evaluate Models section.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section*{Neural Networks}
@@ -125,8 +125,7 @@ All six models share a PAD-aware learned embedding \begin{itemize}
     \item Scheduler: ReduceLROnPlateau on val macro-F1
     (factor 0.5, patience 1). 
     
-    \item Gradient norm clipped at 5.0 (RNN) and 1.0
-    (Transformer) — Vaswani-recommended for from-scratch attention.
+    \item Gradient norm clipped at 5.0 (RNN) and 1.0 (Transformer) — following \citet{Vaswani2017} for from-scratch attention training.
     
     \item Early stopping on val macro-F1 (patience 3). 
     
@@ -198,15 +197,15 @@ We report three metrics deliberately chosen to capture \emph{distinct}
 aspects of the predictions:
 
 \begin{itemize}
-    \item ~\textbf{Span-level chunk-F1}~\citep{Sang2000} — the CoNLL-2000 standard:
+    \item \textbf{Span-level chunk-F1}~\citep{Sang2000} — the CoNLL-2000 standard:
     a span is correct iff its (type, start, end) triple matches gold exactly;
     captures \emph{chunk-correctness};
     
-    \item ~\textbf{Cohen's $\kappa$}~\citep{Cohen1960} — chance-corrected agreement;
+    \item \textbf{Cohen's $\kappa$}~\citep{Cohen1960} — chance-corrected agreement;
     captures \emph{class-imbalance robustness} (a majority-class predictor scores
     high accuracy but $\kappa\!\approx\!0$);
     
-    \item ~\textbf{BIO sequence validity} — fraction of predicted sequences with
+    \item \textbf{BIO sequence validity} — fraction of predicted sequences with
     no illegal transitions (e.g.\ \texttt{I-NP} after \texttt{O}); captures
     \emph{structural correctness}.
 \end{itemize}
@@ -232,7 +231,7 @@ Sentence exact-match  & 44.84\% \\
 \end{tabular}
 \end{table}
 
-\paragraph{3.2~~Test-set results.}
+\subsection*{Test-set results}
 Table~\ref{tab:test} reports DeepBiLSTM on the held-out test set across the
 three metrics plus supporting diagnostics. The model achieves chunk-F1~$=0.898$,
 $\kappa=0.927$ (near-perfect chance-corrected agreement), and BIO
@@ -250,7 +249,7 @@ ADJP lowest (0.602, low support plus frequent ADJP$\leftrightarrow$ADVP confusio
 \label{fig:cm}
 \end{figure}
 
-\paragraph{3.3~~Confusion matrix and error analysis.}
+\subsection*{Confusion matrix and error analysis}
 Figure~\ref{fig:cm} shows the chunk-type confusion matrix (the 17$\times$17
 BIO matrix is collapsed to 10 phrase families for readability). Diagonal
 mass exceeds 0.85 for the four major types (NP, VP, PP, SBAR). The two
